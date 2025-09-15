@@ -40,18 +40,18 @@ func TestIntegrationSendEvent(t *testing.T) {
 	defer producer.Close()
 
 	// Create test event
-	event := models.Event{
+	event := models.EventJson{
 		Id:          uuid.New(),
 		SessionId:   uuid.New(),
 		RequestId:   uuid.New(),
 		TenantId:    uuid.New(),
-		EventType:   uuid.New(),
-		EventSource: uuid.New(),
-		Metadata:    map[string]uuid.UUID{"test": uuid.New()},
+		EventType:   "integration.test.v1",
+		EventSource: "integration-test",
+		Metadata:    map[string]string{"test": "integration"},
 		Timestamp:   time.Now(),
-		CreatedBy:   uuid.New(),
-		Md5Hash:     uuid.New(),
-		Payload: map[string]interface{}{
+		CreatedBy:   "integration-test",
+		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+		Payload: &map[string]interface{}{
 			"test_message": "integration test",
 			"timestamp":    time.Now().Unix(),
 		},
@@ -99,20 +99,20 @@ func TestIntegrationSendEvents(t *testing.T) {
 	defer producer.Close()
 
 	// Create multiple test events
-	events := make([]models.Event, 3)
+	events := make([]models.EventJson, 3)
 	for i := range events {
-		events[i] = models.Event{
+		events[i] = models.EventJson{
 			Id:          uuid.New(),
 			SessionId:   uuid.New(),
 			RequestId:   uuid.New(),
 			TenantId:    uuid.New(),
-			EventType:   uuid.New(),
-			EventSource: uuid.New(),
-			Metadata:    map[string]uuid.UUID{"batch": uuid.New()},
+			EventType:   "integration.batch.test.v1",
+			EventSource: "integration-test",
+			Metadata:    map[string]string{"batch": "test"},
 			Timestamp:   time.Now(),
-			CreatedBy:   uuid.New(),
-			Md5Hash:     uuid.New(),
-			Payload: map[string]interface{}{
+			CreatedBy:   "integration-test",
+			Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+			Payload: &map[string]interface{}{
 				"batch_index": i,
 				"test_data":   "batch test",
 			},
@@ -192,18 +192,18 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 	}
 	defer producer.Close()
 
-	event := models.Event{
+	event := models.EventJson{
 		Id:          uuid.New(),
 		SessionId:   uuid.New(),
 		RequestId:   uuid.New(),
 		TenantId:    uuid.New(),
-		EventType:   uuid.New(),
-		EventSource: uuid.New(),
-		Metadata:    map[string]uuid.UUID{"bench": uuid.New()},
+		EventType:   "benchmark.test.v1",
+		EventSource: "benchmark-test",
+		Metadata:    map[string]string{"bench": "test"},
 		Timestamp:   time.Now(),
-		CreatedBy:   uuid.New(),
-		Md5Hash:     uuid.New(),
-		Payload: map[string]interface{}{
+		CreatedBy:   "benchmark-test",
+		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+		Payload: &map[string]interface{}{
 			"benchmark": true,
 		},
 	}

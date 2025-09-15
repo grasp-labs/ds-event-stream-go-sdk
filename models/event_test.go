@@ -14,23 +14,23 @@ func TestEventSerialization(t *testing.T) {
 	sessionID := uuid.New()
 	requestID := uuid.New()
 	tenantID := uuid.New()
-	eventType := uuid.New()
-	eventSource := uuid.New()
-	createdBy := uuid.New()
-	md5Hash := uuid.New()
+	eventType := "test.event.created.v1"
+	eventSource := "test-service"
+	createdBy := "test-producer"
+	md5Hash := "d41d8cd98f00b204e9800998ecf8427e"
 
-	event := Event{
+	event := EventJson{
 		Id:          eventID,
 		SessionId:   sessionID,
 		RequestId:   requestID,
 		TenantId:    tenantID,
 		EventType:   eventType,
 		EventSource: eventSource,
-		Metadata:    map[string]uuid.UUID{"meta1": uuid.New()},
+		Metadata:    map[string]string{"meta1": "value1"},
 		Timestamp:   time.Now(),
 		CreatedBy:   createdBy,
 		Md5Hash:     md5Hash,
-		Payload: map[string]interface{}{
+		Payload: &map[string]interface{}{
 			"key1": "value1",
 			"key2": 42,
 			"key3": true,
@@ -44,7 +44,7 @@ func TestEventSerialization(t *testing.T) {
 	}
 
 	// Test JSON unmarshaling
-	var unmarshaledEvent Event
+	var unmarshaledEvent EventJson
 	err = json.Unmarshal(jsonData, &unmarshaledEvent)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal event from JSON: %v", err)
@@ -70,12 +70,17 @@ func TestEventSerialization(t *testing.T) {
 		t.Errorf("Expected EventSource %v, got %v", eventSource, unmarshaledEvent.EventSource)
 	}
 
-	// Test payload
-	if len(unmarshaledEvent.Payload) != 3 {
-		t.Errorf("Expected payload with 3 items, got %d", len(unmarshaledEvent.Payload))
-	}
-	if unmarshaledEvent.Payload["key1"] != "value1" {
-		t.Errorf("Expected payload key1 to be 'value1', got %v", unmarshaledEvent.Payload["key1"])
+	// Test payload (now a pointer)
+	if unmarshaledEvent.Payload == nil {
+		t.Error("Expected payload to be not nil")
+	} else {
+		payload := *unmarshaledEvent.Payload
+		if len(payload) != 3 {
+			t.Errorf("Expected payload with 3 items, got %d", len(payload))
+		}
+		if payload["key1"] != "value1" {
+			t.Errorf("Expected payload key1 to be 'value1', got %v", payload["key1"])
+		}
 	}
 }
 
@@ -84,15 +89,15 @@ func TestEventWithOptionalFields(t *testing.T) {
 	sessionID := uuid.New()
 	requestID := uuid.New()
 	tenantID := uuid.New()
-	eventType := uuid.New()
-	eventSource := uuid.New()
-	ownerID := uuid.New()
-	eventSourceURI := uuid.New()
-	messageUUID := uuid.New()
-	createdBy := uuid.New()
-	md5Hash := uuid.New()
+	eventType := "test.event.updated.v1"
+	eventSource := "test-service"
+	ownerID := "test-owner"
+	eventSourceURI := "https://test.example.com"
+	message := "Test message"
+	createdBy := "test-producer"
+	md5Hash := "d41d8cd98f00b204e9800998ecf8427e"
 
-	event := Event{
+	event := EventJson{
 		Id:             eventID,
 		SessionId:      sessionID,
 		RequestId:      requestID,
@@ -101,8 +106,8 @@ func TestEventWithOptionalFields(t *testing.T) {
 		EventSource:    eventSource,
 		OwnerId:        &ownerID,
 		EventSourceUri: &eventSourceURI,
-		Message:        &messageUUID,
-		Metadata:       map[string]uuid.UUID{"meta1": uuid.New()},
+		Message:        &message,
+		Metadata:       map[string]string{"meta1": "value1"},
 		Timestamp:      time.Now(),
 		CreatedBy:      createdBy,
 		Md5Hash:        md5Hash,
@@ -115,7 +120,7 @@ func TestEventWithOptionalFields(t *testing.T) {
 	}
 
 	// Test JSON unmarshaling
-	var unmarshaledEvent Event
+	var unmarshaledEvent EventJson
 	err = json.Unmarshal(jsonData, &unmarshaledEvent)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal event with optional fields: %v", err)
@@ -128,8 +133,8 @@ func TestEventWithOptionalFields(t *testing.T) {
 	if unmarshaledEvent.EventSourceUri == nil || *unmarshaledEvent.EventSourceUri != eventSourceURI {
 		t.Errorf("Expected EventSourceUri %v, got %v", eventSourceURI, unmarshaledEvent.EventSourceUri)
 	}
-	if unmarshaledEvent.Message == nil || *unmarshaledEvent.Message != messageUUID {
-		t.Errorf("Expected Message %v, got %v", messageUUID, unmarshaledEvent.Message)
+	if unmarshaledEvent.Message == nil || *unmarshaledEvent.Message != message {
+		t.Errorf("Expected Message %v, got %v", message, unmarshaledEvent.Message)
 	}
 }
 
@@ -138,23 +143,23 @@ func TestEventJSONFormat(t *testing.T) {
 	sessionID := uuid.New()
 	requestID := uuid.New()
 	tenantID := uuid.New()
-	eventType := uuid.New()
-	eventSource := uuid.New()
-	createdBy := uuid.New()
-	md5Hash := uuid.New()
+	eventType := "test.event.format.v1"
+	eventSource := "test-service"
+	createdBy := "test-producer"
+	md5Hash := "d41d8cd98f00b204e9800998ecf8427e"
 
-	event := Event{
+	event := EventJson{
 		Id:          eventID,
 		SessionId:   sessionID,
 		RequestId:   requestID,
 		TenantId:    tenantID,
 		EventType:   eventType,
 		EventSource: eventSource,
-		Metadata:    map[string]uuid.UUID{"meta1": uuid.New()},
+		Metadata:    map[string]string{"meta1": "value1"},
 		Timestamp:   time.Now(),
 		CreatedBy:   createdBy,
 		Md5Hash:     md5Hash,
-		Payload: map[string]interface{}{
+		Payload: &map[string]interface{}{
 			"test": "data",
 		},
 	}
@@ -178,30 +183,42 @@ func TestEventJSONFormat(t *testing.T) {
 }
 
 func TestEmptyEvent(t *testing.T) {
-	event := Event{}
+	// Create a minimal valid event with all required fields
+	event := EventJson{
+		Id:          uuid.New(),
+		SessionId:   uuid.New(),
+		RequestId:   uuid.New(),
+		TenantId:    uuid.New(),
+		EventType:   "test.event.v1",
+		EventSource: "test-source",
+		Metadata:    map[string]string{},
+		Timestamp:   time.Now(),
+		CreatedBy:   "test",
+		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e", // Valid MD5 hash
+	}
 
-	// Should be able to marshal empty event
+	// Should be able to marshal the event
 	jsonData, err := json.Marshal(event)
 	if err != nil {
-		t.Fatalf("Failed to marshal empty event: %v", err)
+		t.Fatalf("Failed to marshal event: %v", err)
 	}
 
 	// Should be able to unmarshal back
-	var unmarshaledEvent Event
+	var unmarshaledEvent EventJson
 	err = json.Unmarshal(jsonData, &unmarshaledEvent)
 	if err != nil {
-		t.Fatalf("Failed to unmarshal empty event: %v", err)
+		t.Fatalf("Failed to unmarshal event: %v", err)
 	}
 
-	// UUID fields should be zero values
-	if unmarshaledEvent.Id != uuid.Nil {
-		t.Errorf("Expected nil UUID for Id, got %v", unmarshaledEvent.Id)
+	// Verify IDs are preserved
+	if unmarshaledEvent.Id != event.Id {
+		t.Errorf("Expected Id %v, got %v", event.Id, unmarshaledEvent.Id)
 	}
 }
 
 // Helper function to check if string contains substring
 func containsSubstring(str, substr string) bool {
-	return len(str) >= len(substr) && str != substr && str[0:len(str)] != substr &&
+	return len(str) >= len(substr) && str != substr && str[0:] != substr &&
 		(len(str) > len(substr) && findSubstring(str, substr))
 }
 

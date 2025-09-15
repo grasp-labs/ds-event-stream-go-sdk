@@ -1,7 +1,7 @@
 # Go SDK Makefile
 # Provides common development tasks for the Golang SDK
 
-.PHONY: help test test-verbose test-coverage build clean lint fmt vet mod-tidy mod-download
+.PHONY: help test test-verbose test-coverage build clean lint fmt vet mod-tidy mod-download generate-types
 
 # Default target
 help:
@@ -16,6 +16,7 @@ help:
 	@echo "  vet           - Run go vet"
 	@echo "  mod-tidy      - Tidy go modules"
 	@echo "  mod-download  - Download dependencies"
+	@echo "  generate-types - Generate Go structs from JSON schemas"
 
 # Test targets
 test:
@@ -43,6 +44,7 @@ clean:
 	@echo "Cleaning build artifacts..."
 	go clean ./...
 	rm -f coverage.out coverage.html
+	rm -f kafka/system_topics.go models/event.go
 
 # Code quality targets
 lint:
@@ -74,3 +76,20 @@ check: mod-tidy fmt vet test-coverage
 install-tools:
 	@echo "Installing development tools..."
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@echo "Installing go-jsonschema for JSON schema to Go conversion..."
+	go install github.com/atombender/go-jsonschema@latest
+
+# Code generation targets
+generate-types:
+	@echo "Generating Go types from JSON schemas..."
+	@echo "Converting system-topics.json to Go types..."
+	@go-jsonschema --package kafka --output kafka/system_topics.go schemas/system-topics.json
+	@echo "Converting event.json to Go types..."
+	@go-jsonschema --package models --output models/event.go schemas/event.json
+	@echo "Go types generated successfully:"
+	@echo "  - kafka/system_topics.go (from schemas/system-topics.json)"
+	@echo "  - models/event.go (from schemas/event.json)"
+	@echo ""
+	@echo "NOTE: After generation, manually update models/event.go to use uuid.UUID types:"
+	@echo "  1. Add import: github.com/google/uuid"
+	@echo "  2. Change Id, SessionId, RequestId, TenantId from string to uuid.UUID"

@@ -34,14 +34,14 @@
 //	defer producer.Close()
 //
 //	// Create an event
-//	event := models.Event{
+//	event := models.EventJson{
 //		Id:          uuid.New(),
 //		SessionId:   uuid.New(),
 //		RequestId:   uuid.New(),
 //		TenantId:    uuid.New(),
-//		EventType:   uuid.New(),
-//		EventSource: uuid.New(),
-//		Payload:     map[string]interface{}{"key": "value"},
+//		EventType:   "file.uploaded.v1",
+//		EventSource: "uploader-service",
+//		Payload:     &map[string]interface{}{"key": "value"},
 //		// ... other fields
 //	}
 //
@@ -52,7 +52,7 @@
 //	}
 //
 //	// Send batch of events to a topic
-//	events := []models.Event{event, /* more events */}
+//	events := []models.EventJson{event, /* more events */}
 //	err = producer.SendEvents(context.Background(), "events-topic", events, nil)
 //	if err != nil {
 //		log.Printf("Failed to send events: %v", err)
@@ -209,7 +209,7 @@ type Header struct {
 // SendEvent JSON-encodes the event and writes it to the specified Kafka topic.
 // Partition key: evt.Id (falls back to SessionId if zero).
 // Checks topic write permissions using kafka client before sending.
-func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event, headers ...Header) error {
+func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
 	}
@@ -260,7 +260,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 // SendEvents sends a batch of events efficiently to the specified topic.
 // keys[i] is optional; if provided, used for partitioning.
 // Checks topic write permissions using kafka client before sending.
-func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.Event, keys []string, headers ...Header) error {
+func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.EventJson, keys []string, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
 	}

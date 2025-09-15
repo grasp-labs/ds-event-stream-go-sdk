@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -105,20 +106,25 @@ func TestCreateTestEvent(t *testing.T) {
 		t.Error("Expected non-nil session ID")
 	}
 
-	if event.EventType == uuid.Nil {
-		t.Error("Expected non-nil event type")
+	if event.EventType == "" {
+		t.Error("Expected non-empty event type")
 	}
 
-	if event.EventSource == uuid.Nil {
-		t.Error("Expected non-nil event source")
+	if event.EventSource == "" {
+		t.Error("Expected non-empty event source")
 	}
 
-	if len(event.Payload) == 0 {
-		t.Error("Expected non-empty payload")
-	}
+	if event.Payload == nil {
+		t.Error("Expected non-nil payload")
+	} else {
+		payload := *event.Payload
+		if len(payload) == 0 {
+			t.Error("Expected non-empty payload")
+		}
 
-	if event.Payload["test_key"] != "test_value" {
-		t.Errorf("Expected payload test_key to be 'test_value', got %v", event.Payload["test_key"])
+		if payload["test_key"] != "test_value" {
+			t.Errorf("Expected payload test_key to be 'test_value', got %v", payload["test_key"])
+		}
 	}
 }
 
@@ -180,7 +186,7 @@ func TestSendEventsValidation(t *testing.T) {
 	// Test with nil producer
 	var producer *Producer
 	ctx := context.Background()
-	events := []models.Event{createTestEvent()}
+	events := []models.EventJson{createTestEvent()}
 
 	err := producer.SendEvents(ctx, "test-topic", events, nil)
 	if err == nil {
@@ -195,13 +201,13 @@ func TestSendEventsValidation(t *testing.T) {
 	producer, _ = NewProducer(config)
 	defer producer.Close()
 
-	err = producer.SendEvents(ctx, "test-topic", []models.Event{}, nil)
+	err = producer.SendEvents(ctx, "test-topic", []models.EventJson{}, nil)
 	if err != nil {
 		t.Errorf("Expected no error for empty events slice, got %v", err)
 	}
 
 	// Test with mismatched keys length
-	events = []models.Event{createTestEvent(), createTestEvent()}
+	events = []models.EventJson{createTestEvent(), createTestEvent()}
 	keys := []string{"key1"} // Only one key for two events
 
 	err = producer.SendEvents(ctx, "test-topic", events, keys)
@@ -231,19 +237,19 @@ func TestHeader(t *testing.T) {
 }
 
 // Helper function to create a test event
-func createTestEvent() models.Event {
-	return models.Event{
+func createTestEvent() models.EventJson {
+	return models.EventJson{
 		Id:          uuid.New(),
 		SessionId:   uuid.New(),
 		RequestId:   uuid.New(),
 		TenantId:    uuid.New(),
-		EventType:   uuid.New(),
-		EventSource: uuid.New(),
-		Metadata:    map[string]uuid.UUID{"meta1": uuid.New()},
+		EventType:   "test.event.created.v1",
+		EventSource: "test-service",
+		Metadata:    map[string]string{"meta1": "value1"},
 		Timestamp:   time.Now(),
-		CreatedBy:   uuid.New(),
-		Md5Hash:     uuid.New(),
-		Payload: map[string]interface{}{
+		CreatedBy:   "test-producer",
+		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+		Payload: &map[string]interface{}{
 			"test_key": "test_value",
 			"number":   42,
 			"boolean":  true,
@@ -263,6 +269,6 @@ func BenchmarkEventJSONMarshal(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = event.MarshalJSON()
+		_, _ = json.Marshal(event)
 	}
 }
