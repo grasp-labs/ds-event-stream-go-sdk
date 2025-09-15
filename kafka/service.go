@@ -1,7 +1,7 @@
 // kafka_service.go
-// Package kafka provides a Kafka producer for sending Event messages.
+// Package kafka provides a Kafka producer and consumer for Event messages.
 //
-// Example usage:
+// Producer Example usage:
 //
 //	import (
 //		"context"
@@ -67,6 +67,48 @@
 //	if err != nil {
 //		log.Printf("Failed to send event with headers: %v", err)
 //	}
+//
+// Consumer Example usage:
+//
+//	// Create consumer configuration
+//	config := kafka.DefaultConfig(security)
+//	config.GroupID = "my-consumer-group" // optional
+//	// Or customize:
+//	// config := kafka.Config{
+//	//     Brokers: []string{"localhost:9092", "localhost:9093"},
+//	//     Security: security,
+//	//     GroupID: "my-consumer-group", // optional
+//	//     // ... other options
+//	// }
+//
+//	// Create consumer instance
+//	consumer, err := kafka.NewConsumer(config)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//	defer consumer.Close()
+//
+//	// Read single event from topic
+//	event, err := consumer.ReadEvent(context.Background(), "events-topic")
+//	if err != nil {
+//		log.Printf("Failed to read event: %v", err)
+//	} else {
+//		log.Printf("Received event: %s", event.EventType)
+//	}
+//
+//	// Read with specific consumer group
+//	event, err = consumer.ReadEvent(context.Background(), "events-topic", "my-group")
+//	if err != nil {
+//		log.Printf("Failed to read event: %v", err)
+//	}
+//
+//	// Read multiple events from topic
+//	events, err := consumer.ReadEvents(context.Background(), "events-topic", 10)
+//	if err != nil {
+//		log.Printf("Failed to read events: %v", err)
+//	} else {
+//		log.Printf("Received %d events", len(events))
+//	}
 package kafka
 
 import (
@@ -86,12 +128,19 @@ type Producer struct {
 	client *kafka.Client
 }
 
+// Consumer wraps a kafka-go Reader for reading model messages from topics.
+type Consumer struct {
+	config  Config
+	client  *kafka.Client
+	readers map[string]*kafka.Reader // topic -> reader mapping
+}
+
 type Security struct {
 	Username string
 	Password string
 }
 
-// Config controls writer behavior. Tune as needed.
+// Config controls producer and consumer behavior. Tune as needed.
 type Config struct {
 	Brokers                []string // e.g. []string{"broker1:9092","broker2:9092"}
 	Security               Security
@@ -104,6 +153,16 @@ type Config struct {
 	Async                  bool
 	AllowAutoTopicCreation bool
 	WriteTimeout           time.Duration // per-message write timeout
+
+	// Consumer-specific fields (optional)
+	GroupID        string        // Consumer group ID (optional, can be set per read operation)
+	Partition      int           // Partition to read from (use -1 for all partitions)
+	MinBytes       int           // Minimum number of bytes to fetch in each request
+	MaxBytes       int           // Maximum number of bytes to fetch in each request
+	MaxWait        time.Duration // Maximum amount of time to wait for messages
+	ReadTimeout    time.Duration // per-message read timeout
+	CommitInterval time.Duration // How often to commit offsets
+	StartOffset    int64         // Where to start reading (kafka.FirstOffset or kafka.LastOffset)
 }
 
 // DefaultConfig gives sensible production-ish defaults.
@@ -120,6 +179,15 @@ func DefaultConfig(security Security) Config {
 		Async:                  false,
 		AllowAutoTopicCreation: true,
 		WriteTimeout:           10 * time.Second,
+
+		// Consumer defaults
+		Partition:      -1, // Read from all partitions
+		MinBytes:       1,
+		MaxBytes:       1 << 20, // 1 MiB
+		MaxWait:        500 * time.Millisecond,
+		ReadTimeout:    10 * time.Second,
+		CommitInterval: 1 * time.Second,
+		StartOffset:    kafka.FirstOffset,
 	}
 }
 
@@ -153,11 +221,86 @@ func NewProducer(cfg Config) (*Producer, error) {
 	return &Producer{w: w, client: client}, nil
 }
 
+func NewConsumer(cfg Config) (*Consumer, error) {
+	if len(cfg.Brokers) == 0 {
+		return nil, errors.New("kafka: no brokers provided")
+	}
+
+	transport := &kafka.Transport{}
+	mesh, _ := scram.Mechanism(scram.SHA512, cfg.Security.Username, cfg.Security.Password)
+	transport.SASL = mesh
+
+	// Create client for ACL checks
+	client := &kafka.Client{
+		Addr:      kafka.TCP(cfg.Brokers...),
+		Transport: transport,
+	}
+
+	return &Consumer{
+		config:  cfg,
+		client:  client,
+		readers: make(map[string]*kafka.Reader),
+	}, nil
+}
+
 func (p *Producer) Close() error {
 	if p == nil || p.w == nil {
 		return nil
 	}
 	return p.w.Close()
+}
+
+func (c *Consumer) Close() error {
+	if c == nil || c.readers == nil {
+		return nil
+	}
+
+	var lastErr error
+	for _, reader := range c.readers {
+		if err := reader.Close(); err != nil {
+			lastErr = err
+		}
+	}
+	return lastErr
+}
+
+// getOrCreateReader gets or creates a reader for the specified topic and groupID
+func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, error) {
+	if c == nil {
+		return nil, errors.New("kafka: consumer not initialized")
+	}
+
+	key := topic
+	if groupID != "" {
+		key = groupID + ":" + topic
+	}
+
+	if reader, exists := c.readers[key]; exists {
+		return reader, nil
+	}
+
+	readerConfig := kafka.ReaderConfig{
+		Brokers:        c.config.Brokers,
+		Topic:          topic,
+		GroupID:        groupID,
+		MinBytes:       c.config.MinBytes,
+		MaxBytes:       c.config.MaxBytes,
+		MaxWait:        c.config.MaxWait,
+		CommitInterval: c.config.CommitInterval,
+		StartOffset:    c.config.StartOffset,
+	}
+
+	// Set partition if specified (for partition-specific reading)
+	if c.config.Partition >= 0 {
+		readerConfig.Partition = c.config.Partition
+		readerConfig.GroupID = "" // Can't use group ID with specific partition
+	}
+
+	reader := kafka.NewReader(readerConfig)
+	reader.SetOffsetAt(context.Background(), time.Now()) // Start from current time by default
+
+	c.readers[key] = reader
+	return reader, nil
 }
 
 // checkTopicWritePermission checks if we can write to a topic by attempting to get topic metadata
@@ -317,4 +460,192 @@ func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.E
 	}
 
 	return p.w.WriteMessages(writeCtx, msgs...)
+}
+
+// checkTopicReadPermission checks if we can read from a topic by attempting to get topic metadata
+func (c *Consumer) checkTopicReadPermission(ctx context.Context, topic string) error {
+	if c == nil || c.client == nil {
+		return errors.New("kafka: consumer not initialized")
+	}
+
+	// Try to get topic metadata - this will fail if we don't have permission
+	req := &kafka.MetadataRequest{
+		Topics: []string{topic},
+	}
+
+	_, err := c.client.Metadata(ctx, req)
+	if err != nil {
+		// Check for specific authorization error patterns
+		errStr := err.Error()
+		if containsAny(errStr, []string{"authorization", "access denied", "not authorized", "permission denied"}) {
+			return errors.New("kafka: access denied to topic '" + topic + "' - " + err.Error())
+		}
+		// For other errors (network, timeout, etc.), we'll allow the read to proceed
+		// as the actual read operation might still succeed
+		return nil
+	}
+
+	return nil
+}
+
+// ReadEvent reads a single event from the specified topic and returns it as EventJson.
+// Blocks until a message is available or context is cancelled.
+// groupID is optional - if empty, will read from all partitions without consumer group semantics.
+func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...string) (*models.EventJson, error) {
+	if c == nil {
+		return nil, errors.New("kafka: consumer not initialized")
+	}
+	if topic == "" {
+		return nil, errors.New("kafka: topic is required")
+	}
+
+	gid := ""
+	if len(groupID) > 0 {
+		gid = groupID[0]
+	} else if c.config.GroupID != "" {
+		gid = c.config.GroupID
+	}
+
+	// Check ACL permissions before reading
+	if err := c.checkTopicReadPermission(ctx, topic); err != nil {
+		return nil, err
+	}
+
+	reader, err := c.getOrCreateReader(topic, gid)
+	if err != nil {
+		return nil, err
+	}
+
+	readCtx := ctx
+	if deadline, has := ctx.Deadline(); !has || time.Until(deadline) <= 0 {
+		var cancel context.CancelFunc
+		readCtx, cancel = context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+	}
+
+	msg, err := reader.ReadMessage(readCtx)
+	if err != nil {
+		return nil, err
+	}
+
+	var event models.EventJson
+	if err := json.Unmarshal(msg.Value, &event); err != nil {
+		return nil, errors.New("kafka: failed to unmarshal event - " + err.Error())
+	}
+
+	return &event, nil
+}
+
+// ReadEvents reads multiple events from the specified topic with a specified limit.
+// Returns up to 'limit' events or all available events if fewer are available.
+// Blocks until at least one message is available or context is cancelled.
+// groupID is optional - if empty, will read from all partitions without consumer group semantics.
+func (c *Consumer) ReadEvents(ctx context.Context, topic string, limit int, groupID ...string) ([]models.EventJson, error) {
+	if c == nil {
+		return nil, errors.New("kafka: consumer not initialized")
+	}
+	if topic == "" {
+		return nil, errors.New("kafka: topic is required")
+	}
+	if limit <= 0 {
+		return nil, errors.New("kafka: limit must be greater than 0")
+	}
+
+	gid := ""
+	if len(groupID) > 0 {
+		gid = groupID[0]
+	} else if c.config.GroupID != "" {
+		gid = c.config.GroupID
+	}
+
+	// Check ACL permissions before reading
+	if err := c.checkTopicReadPermission(ctx, topic); err != nil {
+		return nil, err
+	}
+
+	reader, err := c.getOrCreateReader(topic, gid)
+	if err != nil {
+		return nil, err
+	}
+
+	readCtx := ctx
+	if deadline, has := ctx.Deadline(); !has || time.Until(deadline) <= 0 {
+		var cancel context.CancelFunc
+		readCtx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+	}
+
+	events := make([]models.EventJson, 0, limit)
+
+	for i := 0; i < limit; i++ {
+		msg, err := reader.ReadMessage(readCtx)
+		if err != nil {
+			if i > 0 {
+				// Return what we have if we got some messages
+				break
+			}
+			return nil, err
+		}
+
+		var event models.EventJson
+		if err := json.Unmarshal(msg.Value, &event); err != nil {
+			// Skip malformed messages and continue
+			continue
+		}
+
+		events = append(events, event)
+	}
+
+	return events, nil
+}
+
+// CommitMessages manually commits the current offset for a specific topic reader.
+// Only needed if using manual commit mode.
+func (c *Consumer) CommitMessages(ctx context.Context, topic string, msgs ...kafka.Message) error {
+	if c == nil {
+		return errors.New("kafka: consumer not initialized")
+	}
+	if topic == "" {
+		return errors.New("kafka: topic is required")
+	}
+
+	// Find the reader for this topic
+	var reader *kafka.Reader
+	for key, r := range c.readers {
+		if key == topic || (len(key) > len(topic) && key[len(key)-len(topic):] == topic) {
+			reader = r
+			break
+		}
+	}
+
+	if reader == nil {
+		return errors.New("kafka: no active reader for topic " + topic)
+	}
+
+	return reader.CommitMessages(ctx, msgs...)
+}
+
+// Stats returns reader statistics for a specific topic.
+func (c *Consumer) Stats(topic string) (kafka.ReaderStats, error) {
+	if c == nil {
+		return kafka.ReaderStats{}, errors.New("kafka: consumer not initialized")
+	}
+	if topic == "" {
+		return kafka.ReaderStats{}, errors.New("kafka: topic is required")
+	}
+
+	// Find the reader for this topic
+	var reader *kafka.Reader
+	for key, r := range c.readers {
+		if key == topic || (len(key) > len(topic) && key[len(key)-len(topic):] == topic) {
+			reader = r
+			break
+		}
+	}
+
+	if reader == nil {
+		return kafka.ReaderStats{}, errors.New("kafka: no active reader for topic " + topic)
+	}
+
+	return reader.Stats(), nil
 }

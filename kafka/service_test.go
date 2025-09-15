@@ -272,3 +272,207 @@ func BenchmarkEventJSONMarshal(b *testing.B) {
 		_, _ = json.Marshal(event)
 	}
 }
+
+// Consumer tests
+
+func TestDefaultConsumerConfig(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security)
+	config.GroupID = "test-group"
+
+	// Test default values
+	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.kafka.ds.local:9095" {
+		t.Errorf("Expected default broker, got %v", config.Brokers)
+	}
+
+	if config.Security.Username != "test_user" {
+		t.Errorf("Expected username 'test_user', got %s", config.Security.Username)
+	}
+
+	if config.Security.Password != "test_pass" {
+		t.Errorf("Expected password 'test_pass', got %s", config.Security.Password)
+	}
+
+	if config.GroupID != "test-group" {
+		t.Errorf("Expected group ID 'test-group', got %s", config.GroupID)
+	}
+
+	if config.ReadTimeout != 10*time.Second {
+		t.Errorf("Expected read timeout 10s, got %v", config.ReadTimeout)
+	}
+
+	if config.Partition != -1 {
+		t.Errorf("Expected partition -1 (all partitions), got %d", config.Partition)
+	}
+}
+
+func TestNewConsumerValidation(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	// Test with empty brokers
+	config := Config{
+		Brokers:  []string{},
+		Security: security,
+		GroupID:  "test-group",
+	}
+
+	_, err := NewConsumer(config)
+	if err == nil || err.Error() != "kafka: no brokers provided" {
+		t.Errorf("Expected 'no brokers provided' error, got %v", err)
+	}
+}
+
+func TestNewConsumerSuccess(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security)
+	config.GroupID = "test-group"
+
+	consumer, err := NewConsumer(config)
+	if err != nil {
+		t.Fatalf("Expected successful consumer creation, got error: %v", err)
+	}
+
+	if consumer == nil {
+		t.Fatal("Expected non-nil consumer")
+	}
+
+	if consumer.readers == nil {
+		t.Error("Expected non-nil readers map")
+	}
+
+	if consumer.client == nil {
+		t.Error("Expected non-nil client")
+	}
+
+	// Test Close
+	err = consumer.Close()
+	if err != nil {
+		t.Errorf("Expected successful close, got error: %v", err)
+	}
+}
+
+func TestConsumerClose(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security)
+	config.GroupID = "test-group"
+	consumer, err := NewConsumer(config)
+	if err != nil {
+		t.Fatalf("Failed to create consumer: %v", err)
+	}
+
+	// Test normal close
+	err = consumer.Close()
+	if err != nil {
+		t.Errorf("Expected successful close, got error: %v", err)
+	}
+
+	// Test close on already closed consumer
+	err = consumer.Close()
+	if err != nil {
+		t.Errorf("Expected successful close on already closed consumer, got error: %v", err)
+	}
+}
+
+func TestConsumerCloseNil(t *testing.T) {
+	var consumer *Consumer
+
+	// Test close on nil consumer
+	err := consumer.Close()
+	if err != nil {
+		t.Errorf("Expected nil error for nil consumer close, got %v", err)
+	}
+}
+
+func TestReadEventValidation(t *testing.T) {
+	var consumer *Consumer
+
+	// Test ReadEvent on nil consumer
+	_, err := consumer.ReadEvent(context.Background(), "test-topic")
+	if err == nil || err.Error() != "kafka: consumer not initialized" {
+		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
+	}
+
+	// Test ReadEvents on nil consumer
+	_, err = consumer.ReadEvents(context.Background(), "test-topic", 5)
+	if err == nil || err.Error() != "kafka: consumer not initialized" {
+		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
+	}
+}
+
+func TestReadEventsValidation(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security)
+	config.GroupID = "test-group"
+	consumer, err := NewConsumer(config)
+	if err != nil {
+		t.Fatalf("Failed to create consumer: %v", err)
+	}
+	defer consumer.Close()
+
+	// Test with invalid limit
+	_, err = consumer.ReadEvents(context.Background(), "test-topic", 0)
+	if err == nil || err.Error() != "kafka: limit must be greater than 0" {
+		t.Errorf("Expected 'limit must be greater than 0' error, got %v", err)
+	}
+
+	_, err = consumer.ReadEvents(context.Background(), "test-topic", -1)
+	if err == nil || err.Error() != "kafka: limit must be greater than 0" {
+		t.Errorf("Expected 'limit must be greater than 0' error, got %v", err)
+	}
+
+	// Test with empty topic
+	_, err = consumer.ReadEvents(context.Background(), "", 5)
+	if err == nil || err.Error() != "kafka: topic is required" {
+		t.Errorf("Expected 'topic is required' error, got %v", err)
+	}
+}
+
+func TestConsumerStats(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security)
+	config.GroupID = "test-group"
+	consumer, err := NewConsumer(config)
+	if err != nil {
+		t.Fatalf("Failed to create consumer: %v", err)
+	}
+	defer consumer.Close()
+
+	// Test getting stats for non-existent topic
+	_, err = consumer.Stats("test-topic")
+	if err == nil || err.Error() != "kafka: no active reader for topic test-topic" {
+		t.Errorf("Expected 'no active reader' error, got %v", err)
+	}
+}
+
+func TestConsumerStatsNil(t *testing.T) {
+	var consumer *Consumer
+
+	// Test stats on nil consumer
+	_, err := consumer.Stats("test-topic")
+	if err == nil || err.Error() != "kafka: consumer not initialized" {
+		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
+	}
+}
