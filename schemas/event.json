@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:example:event-schema",
+  "title": "Event",
+  "description": "Domain event carrying payload, context, and metadata.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for the event."
+    },
+    "session_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Correlation/session identifier."
+    },
+    "request_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Upstream request identifier."
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Tenant identifier."
+    },
+    "owner_id": {
+      "type": ["string", "null"],
+      "description": "Optional owner id."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Event type."
+    },
+    "event_source": {
+      "type": "string",
+      "description": "Logical source of the event."
+    },
+    "event_source_uri": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Optional URI describing the event source."
+    },
+    "affected_entity_uri": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Optional URI of the affected entity."
+    },
+    "message": {
+      "type": ["string", "null"],
+      "description": "Optional human-readable message."
+    },
+    "payload": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "JSON body of the event (arbitrary key/value map)."
+    },
+    "payload_uri": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Optional URI to an external payload."
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Arbitrary string key/value metadata.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "tags": {
+      "type": ["object", "null"],
+      "description": "Optional string key/value tags.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Event timestamp."
+    },
+    "created_by": {
+      "type": "string",
+      "description": "Identifier of the creator/producer."
+    },
+    "md5_hash": {
+      "type": "string",
+      "description": "MD5 hash of the canonical event representation.",
+      "pattern": "^[A-Fa-f0-9]{32}$"
+    },
+    "context": {
+      "type": ["object", "null"],
+      "additionalProperties": true,
+      "description": "Processing context for consumers (arbitrary key/value map)."
+    },
+    "context_uri": {
+      "type": ["string", "null"],
+      "format": "uri",
+      "description": "Optional URI to external context."
+    }
+  },
+  "required": [
+    "id",
+    "session_id",
+    "request_id",
+    "tenant_id",
+    "event_type",
+    "event_source",
+    "metadata",
+    "timestamp",
+    "created_by",
+    "md5_hash"
+  ],
+  "examples": [
+    {
+      "id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+      "session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+      "request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+      "tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+      "owner_id": "user_123",
+      "event_type": "file.uploaded",
+      "event_source": "uploader-service",
+      "event_source_uri": "https://svc.example.com/components/uploader",
+      "affected_entity_uri": "urn:example:file:12345",
+      "message": "File uploaded successfully.",
+      "payload": {
+        "fileName": "report.csv",
+        "sizeBytes": 1048576
+      },
+      "payload_uri": "s3://bucket/reports/report.csv",
+      "metadata": {
+        "trace_id": "abcd1234",
+        "region": "eu-west-1"
+      },
+      "tags": {
+        "env": "prod",
+        "team": "data"
+      },
+      "timestamp": "2025-09-04T10:15:30Z",
+      "created_by": "uploader-service",
+      "md5_hash": "d41d8cd98f00b204e9800998ecf8427e",
+      "context": {
+        "retries": 0,
+        "node": "worker-7"
+      },
+      "context_uri": "https://svc.example.com/runs/98765/context"
+    }
+  ]
+}

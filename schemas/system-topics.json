@@ -1,0 +1,285 @@
+{
+  "$id": "https://example.com/schemas/event-id.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EventID",
+  "type": "string",
+  "enum": [
+    "idp.identity..user.created.v1",
+    "idp.identity..user.updated.v1",
+    "idp.identity..user.deleted.v1",
+    "idp.identity..user.authenticated.v1",
+    "idp.identity..tenant.created.v1",
+    "idp.identity..tenant.updated.v1",
+    "idp.identity..tenant.deleted.v1",
+    "ds.pipeline..job.requested.v1",
+    "ds.pipeline..job.started.v1",
+    "ds.pipeline..job.completed.v1",
+    "ds.pipeline..job.failed.v1",
+    "ds.pipeline.injection.task.completed.v1",
+    "ds.pipeline.injection.task.failed.v1",
+    "ds.pipeline.injection.metric.created.v1",
+    "ds.pipeline.transform.task.completed.v1",
+    "ds.pipeline.transform.task.failed.v1",
+    "ds.pipeline.transform.metric.created.v1",
+    "ds.pipeline.migrator.task.completed.v1",
+    "ds.pipeline.migrator.task.failed.v1",
+    "ds.pipeline.migrator.metric.created.v1",
+    "ds.pipeline.synchronizer.task.requested.v1",
+    "ds.pipeline.synchronizer.task.completed.v1",
+    "ds.pipeline.synchronizer.task.failed.v1",
+    "ds.pipeline.synchronizer.metric.created.v1",
+    "ds.pipeline.synchronizer.job.requested.v1",
+    "ds.pipeline.synchronizer.job.completed.v1",
+    "ds.pipeline.synchronizer.job.failed.v1",
+    "ds.pipeline.synchronizer.metric.created.v1",
+    "ds.pipeline.clone.task.requested.v1",
+    "ds.pipeline.clone.task.completed.v1",
+    "ds.pipeline.clone.task.failed.v1",
+    "ds.pipeline.clone.metric.created.v1",
+    "ds.workflow.pipeline.job.requested.v1",
+    "ds.workflow.pipeline.job.queued.v1",
+    "ds.workflow.pipeline.job.started.v1",
+    "ds.workflow.pipeline.job.completed.v1",
+    "ds.workflow.pipeline.job.failed.v1",
+    "ds.workflow.pipeline.task.started.v1",
+    "ds.workflow.pipeline.task.completed.v1",
+    "ds.workflow.pipeline.task.failed.v1",
+    "ds.workflow..pipeline.created.v1",
+    "ds.workflow..pipeline.updated.v1",
+    "ds.workflow..pipeline.deleted.v1",
+    "ds.workflow..dataset.created.v1",
+    "ds.workflow..dataset.updated.v1",
+    "ds.workflow..dataset.deleted.v1",
+    "ds.workflow..linked-service.created.v1",
+    "ds.workflow..linked-service.updated.v1",
+    "ds.workflow..linked-service.deleted.v1",
+    "ds.core.provision.job.requested.v1",
+    "ds.core.provision.job.completed.v1",
+    "ds.core.provision.job.failed.v1",
+    "ds.core.config.info.updated.v1",
+    "ds.core.config.status.updated.v1",
+    "ds.core.billing.usage.created.v1"
+  ],
+  "oneOf": [
+    {
+      "const": "idp.identity..user.created.v1",
+      "description": "User created event"
+    },
+    {
+      "const": "idp.identity..user.updated.v1",
+      "description": "User updated event"
+    },
+    {
+      "const": "idp.identity..user.deleted.v1",
+      "description": "User deleted event"
+    },
+    {
+      "const": "idp.identity..user.authenticated.v1",
+      "description": "User authenticated event"
+    },
+    {
+      "const": "idp.identity..tenant.created.v1",
+      "description": "Tenant created event"
+    },
+    {
+      "const": "idp.identity..tenant.updated.v1",
+      "description": "Tenant updated event"
+    },
+    {
+      "const": "idp.identity..tenant.deleted.v1",
+      "description": "Tenant deleted event"
+    },
+    {
+      "const": "ds.pipeline..job.requested.v1",
+      "description": "Pipeline job requested event"
+    },
+    {
+      "const": "ds.pipeline..job.started.v1",
+      "description": "Pipeline job started event"
+    },
+    {
+      "const": "ds.pipeline..job.completed.v1",
+      "description": "Pipeline job completed event"
+    },
+    {
+      "const": "ds.pipeline..job.failed.v1",
+      "description": "Pipeline job failed event"
+    },
+    {
+      "const": "ds.pipeline.injection.task.completed.v1",
+      "description": "Injection task completed event"
+    },
+    {
+      "const": "ds.pipeline.injection.task.failed.v1",
+      "description": "Injection task failed event"
+    },
+    {
+      "const": "ds.pipeline.injection.metric.created.v1",
+      "description": "Injection metric created event"
+    },
+    {
+      "const": "ds.pipeline.transform.task.completed.v1",
+      "description": "Transform task completed event"
+    },
+    {
+      "const": "ds.pipeline.transform.task.failed.v1",
+      "description": "Transform task failed event"
+    },
+    {
+      "const": "ds.pipeline.transform.metric.created.v1",
+      "description": "Transform metric created event"
+    },
+    {
+      "const": "ds.pipeline.migrator.task.completed.v1",
+      "description": "Migrator task completed event"
+    },
+    {
+      "const": "ds.pipeline.migrator.task.failed.v1",
+      "description": "Migrator task failed event"
+    },
+    {
+      "const": "ds.pipeline.migrator.metric.created.v1",
+      "description": "Migrator metric created event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.task.requested.v1",
+      "description": "Synchronizer task requested event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.task.completed.v1",
+      "description": "Synchronizer task completed event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.task.failed.v1",
+      "description": "Synchronizer task failed event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.metric.created.v1",
+      "description": "Synchronizer metric created event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.job.requested.v1",
+      "description": "Synchronizer job requested event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.job.completed.v1",
+      "description": "Synchronizer job completed event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.job.failed.v1",
+      "description": "Synchronizer job failed event"
+    },
+    {
+      "const": "ds.pipeline.synchronizer.metric.created.v1",
+      "description": "Synchronizer metric created event"
+    },
+    {
+      "const": "ds.pipeline.clone.task.requested.v1",
+      "description": "Clone task requested event"
+    },
+    {
+      "const": "ds.pipeline.clone.task.completed.v1",
+      "description": "Clone task completed event"
+    },
+    {
+      "const": "ds.pipeline.clone.task.failed.v1",
+      "description": "Clone task failed event"
+    },
+    {
+      "const": "ds.pipeline.clone.metric.created.v1",
+      "description": "Clone metric created event"
+    },
+    {
+      "const": "ds.workflow.pipeline.job.requested.v1",
+      "description": "Workflow pipeline job requested event"
+    },
+    {
+      "const": "ds.workflow.pipeline.job.queued.v1",
+      "description": "Workflow pipeline job queued event"
+    },
+    {
+      "const": "ds.workflow.pipeline.job.started.v1",
+      "description": "Workflow pipeline job started event"
+    },
+    {
+      "const": "ds.workflow.pipeline.job.completed.v1",
+      "description": "Workflow pipeline job completed event"
+    },
+    {
+      "const": "ds.workflow.pipeline.job.failed.v1",
+      "description": "Workflow pipeline job failed event"
+    },
+    {
+      "const": "ds.workflow.pipeline.task.started.v1",
+      "description": "Workflow pipeline task started event"
+    },
+    {
+      "const": "ds.workflow.pipeline.task.completed.v1",
+      "description": "Workflow pipeline task completed event"
+    },
+    {
+      "const": "ds.workflow.pipeline.task.failed.v1",
+      "description": "Workflow pipeline task failed event"
+    },
+    {
+      "const": "ds.workflow..pipeline.created.v1",
+      "description": "Workflow pipeline created event"
+    },
+    {
+      "const": "ds.workflow..pipeline.updated.v1",
+      "description": "Workflow pipeline updated event"
+    },
+    {
+      "const": "ds.workflow..pipeline.deleted.v1",
+      "description": "Workflow pipeline deleted event"
+    },
+    {
+      "const": "ds.workflow..dataset.created.v1",
+      "description": "Workflow dataset created event"
+    },
+    {
+      "const": "ds.workflow..dataset.updated.v1",
+      "description": "Workflow dataset updated event"
+    },
+    {
+      "const": "ds.workflow..dataset.deleted.v1",
+      "description": "Workflow dataset deleted event"
+    },
+    {
+      "const": "ds.workflow..linked-service.created.v1",
+      "description": "Workflow linked service created event"
+    },
+    {
+      "const": "ds.workflow..linked-service.updated.v1",
+      "description": "Workflow linked service updated event"
+    },
+    {
+      "const": "ds.workflow..linked-service.deleted.v1",
+      "description": "Workflow linked service deleted event"
+    },
+    {
+      "const": "ds.core.provision.job.requested.v1",
+      "description": "Core provision job requested event"
+    },
+    {
+      "const": "ds.core.provision.job.completed.v1",
+      "description": "Core provision job completed event"
+    },
+    {
+      "const": "ds.core.provision.job.failed.v1",
+      "description": "Core provision job failed event"
+    },
+    {
+      "const": "ds.core.config.info.updated.v1",
+      "description": "Core config info updated event"
+    },
+    {
+      "const": "ds.core.config.status.updated.v1",
+      "description": "Core config status updated event"
+    },
+    {
+      "const": "ds.core.billing.usage.created.v1",
+      "description": "Core billing usage created event"
+    }
+  ]
+}
