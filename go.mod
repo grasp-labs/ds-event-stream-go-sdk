@@ -1,4 +1,4 @@
-module github.com/grasp/ds-event-stream-go-sdk
+module github.com/grasp-labs/ds-event-stream-go-sdk
 
 go 1.23
 

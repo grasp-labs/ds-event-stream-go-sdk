@@ -6,8 +6,8 @@
 //	import (
 //		"context"
 //		"github.com/google/uuid"
-//		"github.com/grasp/ds-event-stream-go-sdk/kafka"
-//		"github.com/grasp/ds-event-stream-go-sdk/models"
+//		"github.com/grasp-labs/ds-event-stream-go-sdk/kafka"
+//		"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 //	)
 //
 //	// Create security credentials
@@ -117,7 +117,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/grasp/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
