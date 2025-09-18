@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/grasp/ds-event-streams/sdks/goland/models"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 )
 
 func TestDefaultConfig(t *testing.T) {
@@ -81,6 +81,7 @@ func TestNewProducerSuccess(t *testing.T) {
 
 	if producer == nil {
 		t.Fatal("Expected producer to be created")
+		return
 	}
 
 	if producer.w == nil {
@@ -92,7 +93,10 @@ func TestNewProducerSuccess(t *testing.T) {
 	}
 
 	// Clean up
-	producer.Close()
+	err = producer.Close()
+	if err != nil {
+		t.Errorf("Unexpected error on producer.Close(): %v", err)
+	}
 }
 
 func TestCreateTestEvent(t *testing.T) {
@@ -199,7 +203,12 @@ func TestSendEventsValidation(t *testing.T) {
 		Security: Security{Username: "test", Password: "test"},
 	}
 	producer, _ = NewProducer(config)
-	defer producer.Close()
+	defer func() {
+		err := producer.Close()
+		if err != nil {
+			t.Errorf("Unexpected error on producer.Close(): %v", err)
+		}
+	}()
 
 	err = producer.SendEvents(ctx, "test-topic", []models.EventJson{}, nil)
 	if err != nil {
@@ -345,6 +354,7 @@ func TestNewConsumerSuccess(t *testing.T) {
 
 	if consumer == nil {
 		t.Fatal("Expected non-nil consumer")
+		return
 	}
 
 	if consumer.readers == nil {
@@ -426,7 +436,12 @@ func TestReadEventsValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create consumer: %v", err)
 	}
-	defer consumer.Close()
+	defer func() {
+		err := consumer.Close()
+		if err != nil {
+			t.Errorf("Unexpected error on consumer.Close(): %v", err)
+		}
+	}()
 
 	// Test with invalid limit
 	_, err = consumer.ReadEvents(context.Background(), "test-topic", 0)
@@ -458,7 +473,12 @@ func TestConsumerStats(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create consumer: %v", err)
 	}
-	defer consumer.Close()
+	defer func() {
+		err := consumer.Close()
+		if err != nil {
+			t.Errorf("Unexpected error on consumer.Close(): %v", err)
+		}
+	}()
 
 	// Test getting stats for non-existent topic
 	_, err = consumer.Stats("test-topic")
