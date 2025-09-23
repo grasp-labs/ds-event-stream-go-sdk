@@ -183,6 +183,8 @@ func DefaultConfig(security Security, environment string, useInternalHostnames b
 			} else {
 				brokers = []string{"b0.kafka.ds.local:9095", "b1.kafka.ds.local:9095", "b2.kafka.ds.local:9095"}
 			}
+		default:
+			panic("DefaultConfig: invalid environment: " + environment)
 		}
 	}
 
