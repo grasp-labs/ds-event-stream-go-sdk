@@ -135,15 +135,22 @@ type Consumer struct {
 	readers map[string]*kafka.Reader // topic -> reader mapping
 }
 
-type Security struct {
+type ClientCredentials struct {
 	Username string
 	Password string
 }
 
+type Environment int
+
+const (
+	Dev Environment = iota
+	Prod
+)
+
 // Config controls producer and consumer behavior. Tune as needed.
 type Config struct {
 	Brokers                []string // e.g. []string{"broker1:9092","broker2:9092"}
-	Security               Security
+	ClientCredentials      ClientCredentials
 	RequiredAcks           kafka.RequiredAcks
 	Balancer               kafka.Balancer
 	BatchSize              int
@@ -165,32 +172,28 @@ type Config struct {
 	StartOffset    int64         // Where to start reading (kafka.FirstOffset or kafka.LastOffset)
 }
 
-// DefaultConfig gives sensible production-ish defaults.
-func DefaultConfig(security Security, environment string, useInternalHostnames bool, customBrokers []string) Config {
-
-	brokers := customBrokers
-	if len(customBrokers) == 0 {
-		switch environment {
-		case "dev":
-			if useInternalHostnames {
-				brokers = []string{"kafka.kafka-dev.svc.cluster.local:9092"}
-			} else {
-				brokers = []string{"b0.dev.kafka.ds.local:9095"}
-			}
-		case "prod":
-			if useInternalHostnames {
-				brokers = []string{"kafka.kafka.svc.cluster.local:9092"}
-			} else {
-				brokers = []string{"b0.kafka.ds.local:9095", "b1.kafka.ds.local:9095", "b2.kafka.ds.local:9095"}
-			}
-		default:
-			panic("DefaultConfig: invalid environment: " + environment)
+func GetBootstrapServers(environment Environment, useInternalHostnames bool) []string {
+	switch environment {
+	case Prod:
+		if useInternalHostnames {
+			return []string{"kafka.kafka.svc.cluster.local:9092"}
+		} else {
+			return []string{"b0.kafka.ds.local:9095", "b1.kafka.ds.local:9095", "b2.kafka.ds.local:9095"}
+		}
+	default: // Dev
+		if useInternalHostnames {
+			return []string{"kafka.kafka-dev.svc.cluster.local:9092"}
+		} else {
+			return []string{"b0.dev.kafka.ds.local:9095"}
 		}
 	}
+}
 
+// DefaultConfig gives sensible production-ish defaults.
+func DefaultProducerConfig(clientCredentials ClientCredentials, bootstrapServers []string) Config {
 	return Config{
-		Brokers:                brokers,
-		Security:               security,
+		Brokers:                bootstrapServers,
+		ClientCredentials:      clientCredentials,
 		RequiredAcks:           kafka.RequireOne,
 		Balancer:               &kafka.Hash{}, // stable by key
 		BatchSize:              100,
@@ -212,13 +215,39 @@ func DefaultConfig(security Security, environment string, useInternalHostnames b
 	}
 }
 
+func DefaultConsumerConfig(clientCredentials ClientCredentials, bootstrapServers []string, groupID string) Config {
+	return Config{
+		Brokers:                bootstrapServers,
+		ClientCredentials:      clientCredentials,
+		RequiredAcks:           kafka.RequireOne,
+		Balancer:               &kafka.Hash{}, // stable by key
+		BatchSize:              100,
+		BatchBytes:             1 << 20, // 1 MiB
+		BatchTimeout:           50 * time.Millisecond,
+		Compression:            kafka.Snappy,
+		Async:                  false,
+		AllowAutoTopicCreation: true,
+		WriteTimeout:           10 * time.Second,
+
+		// Consumer defaults
+		Partition:      -1, // Read from all partitions
+		MinBytes:       1,
+		MaxBytes:       1 << 20, // 1 MiB
+		MaxWait:        500 * time.Millisecond,
+		ReadTimeout:    10 * time.Second,
+		CommitInterval: 1 * time.Second,
+		StartOffset:    kafka.FirstOffset,
+		GroupID:        groupID,
+	}
+}
+
 func NewProducer(cfg Config) (*Producer, error) {
 	if len(cfg.Brokers) == 0 {
 		return nil, errors.New("kafka: no brokers provided")
 	}
 
 	transport := &kafka.Transport{}
-	mesh, _ := scram.Mechanism(scram.SHA512, cfg.Security.Username, cfg.Security.Password)
+	mesh, _ := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
 	transport.SASL = mesh
 
 	// Create client for ACL checks
@@ -248,7 +277,7 @@ func NewConsumer(cfg Config) (*Consumer, error) {
 	}
 
 	transport := &kafka.Transport{}
-	mesh, _ := scram.Mechanism(scram.SHA512, cfg.Security.Username, cfg.Security.Password)
+	mesh, _ := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
 	transport.SASL = mesh
 
 	// Create client for ACL checks

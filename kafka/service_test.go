@@ -11,19 +11,22 @@ import (
 )
 
 func TestDefaultConfig(t *testing.T) {
-	security := Security{
+	clientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security, "dev", false, nil)
+	bootstrapServers := GetBootstrapServers(Dev, false)
+	groupID := "test-group"
 
-	if config.Security.Username != "test_user" {
-		t.Errorf("Expected username 'test_user', got %s", config.Security.Username)
+	config := DefaultConsumerConfig(clientCredentials, bootstrapServers, groupID)
+
+	if config.ClientCredentials.Username != clientCredentials.Username {
+		t.Errorf("Expected username 'test_user', got %s", config.ClientCredentials.Username)
 	}
 
-	if config.Security.Password != "test_pass" {
-		t.Errorf("Expected password 'test_pass', got %s", config.Security.Password)
+	if config.ClientCredentials.Password != clientCredentials.Password {
+		t.Errorf("Expected password 'test_pass', got %s", config.ClientCredentials.Password)
 	}
 
 	if config.BatchSize != 100 {
@@ -39,59 +42,41 @@ func TestDefaultConfig(t *testing.T) {
 	}
 }
 
-func TestDefaultConfigProdExternalHostname(t *testing.T) {
-	security := Security{
-		Username: "test_user",
-		Password: "test_pass",
-	}
-
-	config := DefaultConfig(security, "prod", false, nil)
+func TestGetBootstrapServersProdExternalHostname(t *testing.T) {
+	bootstrapServers := GetBootstrapServers(Prod, false)
 
 	// Test default values
-	if len(config.Brokers) != 3 || config.Brokers[0] != "b0.kafka.ds.local:9095" {
-		t.Errorf("Expected prod brokers with external hostnames, got %v", config.Brokers)
+	if len(bootstrapServers) != 3 || bootstrapServers[0] != "b0.kafka.ds.local:9095" {
+		t.Errorf("Expected prod brokers with external hostnames, got %v", bootstrapServers)
 	}
 }
 
-func TestDefaultConfigProdInternalHostname(t *testing.T) {
-	security := Security{
-		Username: "test_user",
-		Password: "test_pass",
-	}
+func TestGetBootstrapServersProdInternalHostname(t *testing.T) {
 
-	config := DefaultConfig(security, "prod", true, nil)
+	bootstrapServers := GetBootstrapServers(Prod, true)
 
 	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "kafka.kafka.svc.cluster.local:9092" {
-		t.Errorf("Expected prod brokers with internal hostnames, got %v", config.Brokers)
+	if len(bootstrapServers) != 1 || bootstrapServers[0] != "kafka.kafka.svc.cluster.local:9092" {
+		t.Errorf("Expected prod brokers with internal hostnames, got %v", bootstrapServers)
 	}
 }
 
-func TestDefaultConfigDevExternalHostname(t *testing.T) {
-	security := Security{
-		Username: "test_user",
-		Password: "test_pass",
-	}
-
-	config := DefaultConfig(security, "dev", false, nil)
+func TestGetBootstrapServersDevExternalHostname(t *testing.T) {
+	bootstrapServers := GetBootstrapServers(Dev, false)
 
 	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
-		t.Errorf("Expected dev brokers with internal hostnames, got %v", config.Brokers)
+	if len(bootstrapServers) != 1 || bootstrapServers[0] != "b0.dev.kafka.ds.local:9095" {
+		t.Errorf("Expected dev brokers with internal hostnames, got %v", bootstrapServers)
 	}
 }
 
-func TestDefaultConfigDevInternalHostname(t *testing.T) {
-	security := Security{
-		Username: "test_user",
-		Password: "test_pass",
-	}
+func TestGetBootstrapServersDevInternalHostname(t *testing.T) {
 
-	config := DefaultConfig(security, "dev", true, nil)
+	bootstrapServers := GetBootstrapServers(Dev, true)
 
 	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "kafka.kafka-dev.svc.cluster.local:9092" {
-		t.Errorf("Expected dev brokers with internal hostnames, got %v", config.Brokers)
+	if len(bootstrapServers) != 1 || bootstrapServers[0] != "kafka.kafka-dev.svc.cluster.local:9092" {
+		t.Errorf("Expected dev brokers with internal hostnames, got %v", bootstrapServers)
 	}
 }
 
@@ -115,7 +100,7 @@ func TestNewProducerValidation(t *testing.T) {
 func TestNewProducerSuccess(t *testing.T) {
 	config := Config{
 		Brokers: []string{"localhost:9092"},
-		Security: Security{
+		ClientCredentials: ClientCredentials{
 			Username: "test_user",
 			Password: "test_pass",
 		},
@@ -185,7 +170,7 @@ func TestCreateTestEvent(t *testing.T) {
 func TestProducerClose(t *testing.T) {
 	config := Config{
 		Brokers: []string{"localhost:9092"},
-		Security: Security{
+		ClientCredentials: ClientCredentials{
 			Username: "test_user",
 			Password: "test_pass",
 		},
@@ -249,8 +234,8 @@ func TestSendEventsValidation(t *testing.T) {
 
 	// Test with empty events slice
 	config := Config{
-		Brokers:  []string{"localhost:9092"},
-		Security: Security{Username: "test", Password: "test"},
+		Brokers:           []string{"localhost:9092"},
+		ClientCredentials: ClientCredentials{Username: "test", Password: "test"},
 	}
 	producer, _ = NewProducer(config)
 	defer func() {
@@ -335,51 +320,57 @@ func BenchmarkEventJSONMarshal(b *testing.B) {
 // Consumer tests
 
 func TestDefaultConsumerConfig(t *testing.T) {
-	security := Security{
+	expectedClientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security, "dev", false, nil)
-	config.GroupID = "test-group"
+	expectedBootstrapServers := GetBootstrapServers(Dev, false)
+
+	expectedGroupID := "test-group"
+
+	expectedReadTimeout := 10 * time.Second
+	expectedPartition := -1
+
+	config := DefaultConsumerConfig(expectedClientCredentials, expectedBootstrapServers, expectedGroupID)
 
 	// Test default values
 	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
 		t.Errorf("Expected default broker, got %v", config.Brokers)
 	}
 
-	if config.Security.Username != "test_user" {
-		t.Errorf("Expected username 'test_user', got %s", config.Security.Username)
+	if config.ClientCredentials.Username != expectedClientCredentials.Username {
+		t.Errorf("Expected username 'test_user', got %s", config.ClientCredentials.Username)
 	}
 
-	if config.Security.Password != "test_pass" {
-		t.Errorf("Expected password 'test_pass', got %s", config.Security.Password)
+	if config.ClientCredentials.Password != expectedClientCredentials.Password {
+		t.Errorf("Expected password 'test_pass', got %s", config.ClientCredentials.Password)
 	}
 
-	if config.GroupID != "test-group" {
+	if config.GroupID != expectedGroupID {
 		t.Errorf("Expected group ID 'test-group', got %s", config.GroupID)
 	}
 
-	if config.ReadTimeout != 10*time.Second {
+	if config.ReadTimeout != expectedReadTimeout {
 		t.Errorf("Expected read timeout 10s, got %v", config.ReadTimeout)
 	}
 
-	if config.Partition != -1 {
+	if config.Partition != expectedPartition {
 		t.Errorf("Expected partition -1 (all partitions), got %d", config.Partition)
 	}
 }
 
 func TestNewConsumerValidation(t *testing.T) {
-	security := Security{
+	expectedClientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
 	// Test with empty brokers
 	config := Config{
-		Brokers:  []string{},
-		Security: security,
-		GroupID:  "test-group",
+		Brokers:           []string{},
+		ClientCredentials: expectedClientCredentials,
+		GroupID:           "test-group",
 	}
 
 	_, err := NewConsumer(config)
@@ -389,13 +380,16 @@ func TestNewConsumerValidation(t *testing.T) {
 }
 
 func TestNewConsumerSuccess(t *testing.T) {
-	security := Security{
+	expectedClientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security, "dev", true, nil)
-	config.GroupID = "test-group"
+	bootstrapServers := GetBootstrapServers(Dev, false)
+
+	expectedGroupID := "test-group"
+
+	config := DefaultConsumerConfig(expectedClientCredentials, bootstrapServers, expectedGroupID)
 
 	consumer, err := NewConsumer(config)
 	if err != nil {
@@ -422,13 +416,15 @@ func TestNewConsumerSuccess(t *testing.T) {
 }
 
 func TestConsumerClose(t *testing.T) {
-	security := Security{
+	clientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security, "dev", true, nil)
-	config.GroupID = "test-group"
+	bootstrapServers := GetBootstrapServers(Dev, false)
+	groupID := "test-group"
+
+	config := DefaultConsumerConfig(clientCredentials, bootstrapServers, groupID)
 	consumer, err := NewConsumer(config)
 	if err != nil {
 		t.Fatalf("Failed to create consumer: %v", err)
@@ -474,13 +470,15 @@ func TestReadEventValidation(t *testing.T) {
 }
 
 func TestReadEventsValidation(t *testing.T) {
-	security := Security{
+	security := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security, "dev", true, nil)
-	config.GroupID = "test-group"
+	bootstrapServers := GetBootstrapServers(Dev, false)
+	groupID := "test-group"
+
+	config := DefaultConsumerConfig(security, bootstrapServers, groupID)
 	consumer, err := NewConsumer(config)
 	if err != nil {
 		t.Fatalf("Failed to create consumer: %v", err)
@@ -511,13 +509,14 @@ func TestReadEventsValidation(t *testing.T) {
 }
 
 func TestConsumerStats(t *testing.T) {
-	security := Security{
+	security := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
+	bootstrapServers := GetBootstrapServers(Dev, false)
+	groupID := "test-group"
 
-	config := DefaultConfig(security, "dev", true, nil)
-	config.GroupID = "test-group"
+	config := DefaultConsumerConfig(security, bootstrapServers, groupID)
 	consumer, err := NewConsumer(config)
 	if err != nil {
 		t.Fatalf("Failed to create consumer: %v", err)
