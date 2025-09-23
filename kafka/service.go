@@ -187,7 +187,7 @@ func DefaultConfig(security Security, environment string, useInternalHostnames b
 	}
 
 	return Config{
-		Brokers:                brokers, // []string{"b0.dev.kafka.ds.local:9095"},
+		Brokers:                brokers,
 		Security:               security,
 		RequiredAcks:           kafka.RequireOne,
 		Balancer:               &kafka.Hash{}, // stable by key
