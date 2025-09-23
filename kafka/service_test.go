@@ -18,11 +18,6 @@ func TestDefaultConfig(t *testing.T) {
 
 	config := DefaultConfig(security, "dev", false, nil)
 
-	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
-		t.Errorf("Expected default broker, got %v", config.Brokers)
-	}
-
 	if config.Security.Username != "test_user" {
 		t.Errorf("Expected username 'test_user', got %s", config.Security.Username)
 	}
@@ -41,6 +36,62 @@ func TestDefaultConfig(t *testing.T) {
 
 	if !config.AllowAutoTopicCreation {
 		t.Error("Expected AllowAutoTopicCreation to be true")
+	}
+}
+
+func TestDefaultConfigProdExternalHostname(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security, "prod", false, nil)
+
+	// Test default values
+	if len(config.Brokers) != 3 || config.Brokers[0] != "b0.kafka.ds.local:9095" {
+		t.Errorf("Expected prod brokers with external hostnames, got %v", config.Brokers)
+	}
+}
+
+func TestDefaultConfigProdInternalHostname(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security, "prod", true, nil)
+
+	// Test default values
+	if len(config.Brokers) != 1 || config.Brokers[0] != "kafka.kafka.svc.cluster.local:9092" {
+		t.Errorf("Expected prod brokers with internal hostnames, got %v", config.Brokers)
+	}
+}
+
+func TestDefaultConfigDevExternalHostname(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security, "dev", false, nil)
+
+	// Test default values
+	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
+		t.Errorf("Expected dev brokers with internal hostnames, got %v", config.Brokers)
+	}
+}
+
+func TestDefaultConfigDevInternalHostname(t *testing.T) {
+	security := Security{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+
+	config := DefaultConfig(security, "dev", true, nil)
+
+	// Test default values
+	if len(config.Brokers) != 1 || config.Brokers[0] != "kafka.kafka-dev.svc.cluster.local:9092" {
+		t.Errorf("Expected dev brokers with internal hostnames, got %v", config.Brokers)
 	}
 }
 
