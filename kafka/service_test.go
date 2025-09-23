@@ -325,17 +325,15 @@ func TestDefaultConsumerConfig(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	expectedBootstrapServers := GetBootstrapServers(Dev, false)
+	bootstrapServers := GetBootstrapServers(Dev, false)
+	groupID := "test-group"
+	readTimeout := 10 * time.Second
+	partition := -1
 
-	expectedGroupID := "test-group"
-
-	expectedReadTimeout := 10 * time.Second
-	expectedPartition := -1
-
-	config := DefaultConsumerConfig(expectedClientCredentials, expectedBootstrapServers, expectedGroupID)
+	config := DefaultConsumerConfig(expectedClientCredentials, bootstrapServers, groupID)
 
 	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
+	if len(config.Brokers) != 1 || config.Brokers[0] != bootstrapServers[0] {
 		t.Errorf("Expected default broker, got %v", config.Brokers)
 	}
 
@@ -347,21 +345,21 @@ func TestDefaultConsumerConfig(t *testing.T) {
 		t.Errorf("Expected password 'test_pass', got %s", config.ClientCredentials.Password)
 	}
 
-	if config.GroupID != expectedGroupID {
+	if config.GroupID != groupID {
 		t.Errorf("Expected group ID 'test-group', got %s", config.GroupID)
 	}
 
-	if config.ReadTimeout != expectedReadTimeout {
+	if config.ReadTimeout != readTimeout {
 		t.Errorf("Expected read timeout 10s, got %v", config.ReadTimeout)
 	}
 
-	if config.Partition != expectedPartition {
+	if config.Partition != partition {
 		t.Errorf("Expected partition -1 (all partitions), got %d", config.Partition)
 	}
 }
 
 func TestNewConsumerValidation(t *testing.T) {
-	expectedClientCredentials := ClientCredentials{
+	clientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
@@ -369,7 +367,7 @@ func TestNewConsumerValidation(t *testing.T) {
 	// Test with empty brokers
 	config := Config{
 		Brokers:           []string{},
-		ClientCredentials: expectedClientCredentials,
+		ClientCredentials: clientCredentials,
 		GroupID:           "test-group",
 	}
 
@@ -380,16 +378,16 @@ func TestNewConsumerValidation(t *testing.T) {
 }
 
 func TestNewConsumerSuccess(t *testing.T) {
-	expectedClientCredentials := ClientCredentials{
+	clientCredentials := ClientCredentials{
 		Username: "test_user",
 		Password: "test_pass",
 	}
 
 	bootstrapServers := GetBootstrapServers(Dev, false)
 
-	expectedGroupID := "test-group"
+	groupID := "test-group"
 
-	config := DefaultConsumerConfig(expectedClientCredentials, bootstrapServers, expectedGroupID)
+	config := DefaultConsumerConfig(clientCredentials, bootstrapServers, groupID)
 
 	consumer, err := NewConsumer(config)
 	if err != nil {
