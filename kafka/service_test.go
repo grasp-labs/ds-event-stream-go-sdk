@@ -16,10 +16,10 @@ func TestDefaultConfig(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security)
+	config := DefaultConfig(security, "dev", false, nil)
 
 	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.kafka.ds.local:9095" {
+	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
 		t.Errorf("Expected default broker, got %v", config.Brokers)
 	}
 
@@ -81,7 +81,6 @@ func TestNewProducerSuccess(t *testing.T) {
 
 	if producer == nil {
 		t.Fatal("Expected producer to be created")
-		return
 	}
 
 	if producer.w == nil {
@@ -290,11 +289,11 @@ func TestDefaultConsumerConfig(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security)
+	config := DefaultConfig(security, "dev", false, nil)
 	config.GroupID = "test-group"
 
 	// Test default values
-	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.kafka.ds.local:9095" {
+	if len(config.Brokers) != 1 || config.Brokers[0] != "b0.dev.kafka.ds.local:9095" {
 		t.Errorf("Expected default broker, got %v", config.Brokers)
 	}
 
@@ -344,7 +343,7 @@ func TestNewConsumerSuccess(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security)
+	config := DefaultConfig(security, "dev", true, nil)
 	config.GroupID = "test-group"
 
 	consumer, err := NewConsumer(config)
@@ -354,7 +353,6 @@ func TestNewConsumerSuccess(t *testing.T) {
 
 	if consumer == nil {
 		t.Fatal("Expected non-nil consumer")
-		return
 	}
 
 	if consumer.readers == nil {
@@ -378,7 +376,7 @@ func TestConsumerClose(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security)
+	config := DefaultConfig(security, "dev", true, nil)
 	config.GroupID = "test-group"
 	consumer, err := NewConsumer(config)
 	if err != nil {
@@ -430,7 +428,7 @@ func TestReadEventsValidation(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security)
+	config := DefaultConfig(security, "dev", true, nil)
 	config.GroupID = "test-group"
 	consumer, err := NewConsumer(config)
 	if err != nil {
@@ -467,7 +465,7 @@ func TestConsumerStats(t *testing.T) {
 		Password: "test_pass",
 	}
 
-	config := DefaultConfig(security)
+	config := DefaultConfig(security, "dev", true, nil)
 	config.GroupID = "test-group"
 	consumer, err := NewConsumer(config)
 	if err != nil {

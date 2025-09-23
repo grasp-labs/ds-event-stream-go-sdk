@@ -166,9 +166,28 @@ type Config struct {
 }
 
 // DefaultConfig gives sensible production-ish defaults.
-func DefaultConfig(security Security) Config {
+func DefaultConfig(security Security, environment string, useInternalHostnames bool, customBrokers []string) Config {
+
+	brokers := customBrokers
+	if len(customBrokers) == 0 {
+		switch environment {
+		case "dev":
+			if useInternalHostnames {
+				brokers = []string{"kafka.kafka-dev.svc.cluster.local:9092"}
+			} else {
+				brokers = []string{"b0.dev.kafka.ds.local:9095"}
+			}
+		case "prod":
+			if useInternalHostnames {
+				brokers = []string{"kafka.kafka.svc.cluster.local:9092"}
+			} else {
+				brokers = []string{"b0.kafka.ds.local:9095", "b1.kafka.ds.local:9095", "b2.kafka.ds.local:9095"}
+			}
+		}
+	}
+
 	return Config{
-		Brokers:                []string{"b0.kafka.ds.local:9095"},
+		Brokers:                brokers, // []string{"b0.dev.kafka.ds.local:9095"},
 		Security:               security,
 		RequiredAcks:           kafka.RequireOne,
 		Balancer:               &kafka.Hash{}, // stable by key
