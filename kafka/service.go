@@ -6,8 +6,8 @@
 //	import (
 //		"context"
 //		"github.com/google/uuid"
-//		"github.com/grasp/ds-event-streams/sdks/goland/kafka"
-//		"github.com/grasp/ds-event-streams/sdks/goland/models"
+//		"github.com/grasp-labs/ds-event-stream-go-sdk/kafka"
+//		"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 //	)
 //
 //	// Create security credentials
@@ -117,7 +117,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/grasp/ds-event-streams/sdks/goland/models"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
@@ -297,7 +297,12 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 	}
 
 	reader := kafka.NewReader(readerConfig)
-	reader.SetOffsetAt(context.Background(), time.Now()) // Start from current time by default
+	if err := reader.SetOffsetAt(context.Background(), time.Now()); err != nil {
+		if errClose := reader.Close(); errClose != nil {
+			return nil, errors.Join(err, errClose)
+		}
+		return nil, err
+	}
 
 	c.readers[key] = reader
 	return reader, nil
