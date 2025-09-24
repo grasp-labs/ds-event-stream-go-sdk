@@ -1,114 +1,3 @@
-// kafka_service.go
-// Package kafka provides a Kafka producer and consumer for Event messages.
-//
-// Producer Example usage:
-//
-//	import (
-//		"context"
-//		"github.com/google/uuid"
-//		"github.com/grasp-labs/ds-event-stream-go-sdk/kafka"
-//		"github.com/grasp-labs/ds-event-stream-go-sdk/models"
-//	)
-//
-//	// Create security credentials
-//	security := kafka.Security{
-//		Username: "kafka_user",
-//		Password: "kafka_pass",
-//	}
-//
-//	// Create producer configuration
-//	config := kafka.DefaultConfig(security)
-//	// Or customize:
-//	// config := kafka.Config{
-//	//     Brokers: []string{"localhost:9092", "localhost:9093"},
-//	//     Security: security,
-//	//     BatchSize: 50,
-//	//     // ... other options
-//	// }
-//
-//	// Create producer instance
-//	producer, err := kafka.NewProducer(config)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	defer producer.Close()
-//
-//	// Create an event
-//	event := models.EventJson{
-//		Id:          uuid.New(),
-//		SessionId:   uuid.New(),
-//		RequestId:   uuid.New(),
-//		TenantId:    uuid.New(),
-//		EventType:   "file.uploaded.v1",
-//		EventSource: "uploader-service",
-//		Payload:     &map[string]interface{}{"key": "value"},
-//		// ... other fields
-//	}
-//
-//	// Send single event to a topic
-//	err = producer.SendEvent(context.Background(), "events-topic", event)
-//	if err != nil {
-//		log.Printf("Failed to send event: %v", err)
-//	}
-//
-//	// Send batch of events to a topic
-//	events := []models.EventJson{event, /* more events */}
-//	err = producer.SendEvents(context.Background(), "events-topic", events, nil)
-//	if err != nil {
-//		log.Printf("Failed to send events: %v", err)
-//	}
-//
-//	// Send with custom headers
-//	headers := []kafka.Header{
-//		{Key: "source", Value: "my-service"},
-//		{Key: "version", Value: "1.0"},
-//	}
-//	err = producer.SendEvent(context.Background(), "events-topic", event, headers...)
-//	if err != nil {
-//		log.Printf("Failed to send event with headers: %v", err)
-//	}
-//
-// Consumer Example usage:
-//
-//	// Create consumer configuration
-//	config := kafka.DefaultConfig(security)
-//	config.GroupID = "my-consumer-group" // optional
-//	// Or customize:
-//	// config := kafka.Config{
-//	//     Brokers: []string{"localhost:9092", "localhost:9093"},
-//	//     Security: security,
-//	//     GroupID: "my-consumer-group", // optional
-//	//     // ... other options
-//	// }
-//
-//	// Create consumer instance
-//	consumer, err := kafka.NewConsumer(config)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	defer consumer.Close()
-//
-//	// Read single event from topic
-//	event, err := consumer.ReadEvent(context.Background(), "events-topic")
-//	if err != nil {
-//		log.Printf("Failed to read event: %v", err)
-//	} else {
-//		log.Printf("Received event: %s", event.EventType)
-//	}
-//
-//	// Read with specific consumer group
-//	event, err = consumer.ReadEvent(context.Background(), "events-topic", "my-group")
-//	if err != nil {
-//		log.Printf("Failed to read event: %v", err)
-//	}
-//
-//	// Read multiple events from topic
-//	events, err := consumer.ReadEvents(context.Background(), "events-topic", 10)
-//	if err != nil {
-//		log.Printf("Failed to read events: %v", err)
-//	} else {
-//		log.Printf("Received %d events", len(events))
-//	}
 package kafka
 
 import (
@@ -146,6 +35,12 @@ const (
 	Dev Environment = iota
 	Prod
 )
+
+// Header is a simple string header.
+type Header struct {
+	Key   string
+	Value string
+}
 
 // Config controls producer and consumer behavior. Tune as needed.
 type Config struct {
@@ -358,63 +253,12 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 	return reader, nil
 }
 
-// checkTopicWritePermission checks if we can write to a topic by attempting to get topic metadata
-func (p *Producer) checkTopicWritePermission(ctx context.Context, topic string) error {
-	if p == nil || p.client == nil {
-		return errors.New("kafka: producer not initialized")
-	}
-
-	// Try to get topic metadata - this will fail if we don't have permission
-	req := &kafka.MetadataRequest{
-		Topics: []string{topic},
-	}
-
-	_, err := p.client.Metadata(ctx, req)
-	if err != nil {
-		// Check for specific authorization error patterns
-		errStr := err.Error()
-		if containsAny(errStr, []string{"authorization", "access denied", "not authorized", "permission denied"}) {
-			return errors.New("kafka: access denied to topic '" + topic + "' - " + err.Error())
-		}
-		// For other errors (network, timeout, etc.), we'll allow the send to proceed
-		// as the actual write operation might still succeed
-		return nil
-	}
-
-	return nil
-}
-
-// containsAny checks if the string contains any of the substrings
-func containsAny(s string, substrs []string) bool {
-	for _, substr := range substrs {
-		if len(s) >= len(substr) {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
-		}
-	}
-	return false
-}
-
-// Header is a simple string header.
-type Header struct {
-	Key   string
-	Value string
-}
-
 // SendEvent JSON-encodes the event and writes it to the specified Kafka topic.
 // Partition key: evt.Id (falls back to SessionId if zero).
 // Checks topic write permissions using kafka client before sending.
 func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
-	}
-
-	// Check ACL permissions before sending using kafka client
-	if err := p.checkTopicWritePermission(ctx, topic); err != nil {
-		return err
 	}
 
 	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
@@ -469,11 +313,6 @@ func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.E
 		return errors.New("kafka: len(keys) must match len(evts) or be zero")
 	}
 
-	// Check ACL permissions before sending using kafka client
-	if err := p.checkTopicWritePermission(ctx, topic); err != nil {
-		return err
-	}
-
 	kh := make([]kafka.Header, 0, len(headers)+2)
 	kh = append(kh,
 		kafka.Header{Key: "content-type", Value: []byte("application/json")},
@@ -517,32 +356,6 @@ func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.E
 	return p.w.WriteMessages(writeCtx, msgs...)
 }
 
-// checkTopicReadPermission checks if we can read from a topic by attempting to get topic metadata
-func (c *Consumer) checkTopicReadPermission(ctx context.Context, topic string) error {
-	if c == nil || c.client == nil {
-		return errors.New("kafka: consumer not initialized")
-	}
-
-	// Try to get topic metadata - this will fail if we don't have permission
-	req := &kafka.MetadataRequest{
-		Topics: []string{topic},
-	}
-
-	_, err := c.client.Metadata(ctx, req)
-	if err != nil {
-		// Check for specific authorization error patterns
-		errStr := err.Error()
-		if containsAny(errStr, []string{"authorization", "access denied", "not authorized", "permission denied"}) {
-			return errors.New("kafka: access denied to topic '" + topic + "' - " + err.Error())
-		}
-		// For other errors (network, timeout, etc.), we'll allow the read to proceed
-		// as the actual read operation might still succeed
-		return nil
-	}
-
-	return nil
-}
-
 // ReadEvent reads a single event from the specified topic and returns it as EventJson.
 // Blocks until a message is available or context is cancelled.
 // groupID is optional - if empty, will read from all partitions without consumer group semantics.
@@ -559,11 +372,6 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 		gid = groupID[0]
 	} else if c.config.GroupID != "" {
 		gid = c.config.GroupID
-	}
-
-	// Check ACL permissions before reading
-	if err := c.checkTopicReadPermission(ctx, topic); err != nil {
-		return nil, err
 	}
 
 	reader, err := c.getOrCreateReader(topic, gid)
@@ -613,11 +421,6 @@ func (c *Consumer) ReadEvents(ctx context.Context, topic string, limit int, grou
 		gid = c.config.GroupID
 	}
 
-	// Check ACL permissions before reading
-	if err := c.checkTopicReadPermission(ctx, topic); err != nil {
-		return nil, err
-	}
-
 	reader, err := c.getOrCreateReader(topic, gid)
 	if err != nil {
 		return nil, err
@@ -654,9 +457,9 @@ func (c *Consumer) ReadEvents(ctx context.Context, topic string, limit int, grou
 	return events, nil
 }
 
-// CommitMessages manually commits the current offset for a specific topic reader.
+// CommitEvents manually commits the current offset for a specific topic reader.
 // Only needed if using manual commit mode.
-func (c *Consumer) CommitMessages(ctx context.Context, topic string, msgs ...kafka.Message) error {
+func (c *Consumer) CommitEvents(ctx context.Context, topic string, msgs ...kafka.Message) error {
 	if c == nil {
 		return errors.New("kafka: consumer not initialized")
 	}
