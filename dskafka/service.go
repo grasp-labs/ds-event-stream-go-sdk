@@ -30,6 +30,7 @@ type ClientCredentials struct {
 	Password string
 }
 
+//go:generate stringer -type=Environment
 type Environment int
 
 const (
