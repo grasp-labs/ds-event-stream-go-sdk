@@ -30,21 +30,21 @@ import (
 
 func main() {
     // Setup credentials
-    credentials := kafka.ClientCredentials{
+    credentials := dskafka.ClientCredentials{
         Username: "your-kafka-username",
         Password: "your-kafka-password",
     }
     
     // Get bootstrap servers for your environment
-    bootstrapServers := kafka.GetBootstrapServers(dskafka.Dev, false) // or dskafka.Prod
+    bootstrapServers := dskafka.GetBootstrapServers(dskafka.Dev, false) // or dskafka.Prod
     
     // Create producer configuration
-    config := kafka.DefaultProducerConfig(credentials, bootstrapServers)
+    config := dskafka.DefaultProducerConfig(credentials, bootstrapServers)
     
     // Create producer
-    producer, err := kafka.NewProducer(config)
-    if err != nil {        
-        log.Panic("Failed to create producer:", err)
+    producer, err := dskafka.NewProducer(config)
+    if err != nil {
+        log.Fatal("Failed to create producer:", err)
     }
     defer producer.Close()
     
@@ -68,7 +68,7 @@ func main() {
     if err != nil {
         log.Printf("Failed to send event: %v", err)
     }
-       
+    
     // Send with custom headers
     headers := []dskafka.Header{
         {Key: "source", Value: "my-service"},
@@ -90,12 +90,12 @@ import (
     "context"
     "log"
 
-    "github.com/grasp-labs/ds-event-stream-go-sdk/kafka"
+    "github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
 )
 
 func main() {
     // Setup credentials
-    credentials := kafka.ClientCredentials{
+    credentials := dskafka.ClientCredentials{
         Username: "your-kafka-username",
         Password: "your-kafka-password",
     }
