@@ -1,7 +1,7 @@
 # Go SDK Makefile
 # Provides common development tasks for the Golang SDK
 
-.PHONY: help test test-verbose test-coverage build clean lint fmt vet mod-tidy mod-download generate-types
+.PHONY: help test test-verbose test-coverage build clean lint fmt vet mod-tidy mod-download generate-types check install-tools integration-tests
 
 # Default target
 help:
@@ -34,6 +34,15 @@ test-coverage:
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+integration-test:
+	@echo "Running integration tests..."
+	@if [ -z "$$DS_CONSUMPTION_INGRESS_V1_PASSWORD" ]; then \
+		echo "Error: DS_CONSUMPTION_INGRESS_V1_PASSWORD environment variable is not set."; \
+		echo "Please set it with: export DS_CONSUMPTION_INGRESS_V1_PASSWORD=your_password"; \
+		exit 1; \
+	fi
+	go test -tags=integration ./...
 
 # Build targets
 build:

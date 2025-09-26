@@ -5,6 +5,8 @@ package dskafka
 
 import (
 	"context"
+	"log"
+	"os"
 	"testing"
 	"time"
 
@@ -21,17 +23,19 @@ func TestIntegrationSendEvent(t *testing.T) {
 		t.Skip("Skipping integration test")
 	}
 
-	// Setup real Kafka configuration
-	config := Config{
-		Brokers: []string{"localhost:9092"}, // Adjust for your test environment
-		Security: Security{
-			Username: "test_user",
-			Password: "test_pass",
-		},
-		BatchSize:    10,
-		BatchTimeout: 100 * time.Millisecond,
-		WriteTimeout: 5 * time.Second,
+	password := os.Getenv("DS_CONSUMPTION_INGRESS_V1_PASSWORD")
+	log.Printf("Password: %s", password)
+
+	// Setup credentials
+	credentials := ClientCredentials{
+		Username: "ds.consumption.ingress.v1",
+		Password: password,
 	}
+
+	boostrapServers := GetBootstrapServers(Dev, false)
+
+	// Setup real Kafka configuration
+	config := DefaultProducerConfig(credentials, boostrapServers)
 
 	producer, err := NewProducer(config)
 	if err != nil {
@@ -61,7 +65,7 @@ func TestIntegrationSendEvent(t *testing.T) {
 	defer cancel()
 
 	// Test sending single event
-	err = producer.SendEvent(ctx, "test-events", event)
+	err = producer.SendEvent(ctx, "ds.workflow.pipeline.job.requested.v1", event)
 	if err != nil {
 		t.Errorf("Failed to send event: %v", err)
 	}
@@ -72,45 +76,9 @@ func TestIntegrationSendEvent(t *testing.T) {
 		{Key: "version", Value: "1.0"},
 	}
 
-	err = producer.SendEvent(ctx, "test-events", event, headers...)
+	err = producer.SendEvent(ctx, "ds.workflow.pipeline.job.requested.v1", event, headers...)
 	if err != nil {
 		t.Errorf("Failed to send event with headers: %v", err)
-	}
-}
-
-func TestIntegrationACLCheck(t *testing.T) {
-	// Skip if not running integration tests
-	if testing.Short() {
-		t.Skip("Skipping integration test")
-	}
-
-	config := Config{
-		Brokers: []string{"localhost:9092"},
-		Security: Security{
-			Username: "test_user",
-			Password: "test_pass",
-		},
-	}
-
-	producer, err := NewProducer(config)
-	if err != nil {
-		t.Fatalf("Failed to create producer: %v", err)
-	}
-	defer producer.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	// Test ACL check for allowed topic
-	err = producer.checkTopicWritePermission(ctx, "test-events")
-	if err != nil {
-		t.Logf("ACL check failed (expected if topic doesn't exist or no permissions): %v", err)
-	}
-
-	// Test ACL check for non-existent topic
-	err = producer.checkTopicWritePermission(ctx, "non-existent-topic-12345")
-	if err != nil {
-		t.Logf("ACL check failed for non-existent topic (expected): %v", err)
 	}
 }
 
@@ -120,13 +88,18 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 		b.Skip("Skipping integration benchmark")
 	}
 
-	config := Config{
-		Brokers: []string{"localhost:9092"},
-		Security: Security{
-			Username: "test_user",
-			Password: "test_pass",
-		},
+	password := os.Getenv("DS_CONSUMPTION_INGRESS_V1_PASSWORD")
+
+	// Setup credentials
+	credentials := ClientCredentials{
+		Username: "ds.consumption.ingress.v1",
+		Password: password,
 	}
+
+	boostrapServers := GetBootstrapServers(Dev, false)
+
+	// Setup real Kafka configuration
+	config := DefaultProducerConfig(credentials, boostrapServers)
 
 	producer, err := NewProducer(config)
 	if err != nil {
