@@ -314,7 +314,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 	})
 
 	if werr != nil {
-		log.Println("kafka: error writing message:", err)
+		log.Println("kafka: error writing message:", werr)
 		return werr
 	}
 	return nil

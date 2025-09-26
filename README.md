@@ -166,21 +166,21 @@ You can get the appropriate bootstrap servers using the helper function:
 // Development environment
 
 // Use external hostnames
-bootstrapServers := dskafka.GetBootstrapServers(kafka.Dev, false)
+bootstrapServers := dskafka.GetBootstrapServers(dskafka.Dev, false)
 // Returns: ["b0.dev.kafka.ds.local:9095"]
 
 // Use internal hostnames (for in-cluster communication)
-bootstrapServers := dskafka.GetBootstrapServers(kafka.Dev, true)
+bootstrapServers := dskafka.GetBootstrapServers(dskafka.Dev, true)
 // Returns: ["kafka-dev.kafka.svc.cluster.local:9092"]
 
 // Production environment
 
 // Use external hostnames
-bootstrapServers := dskafka.GetBootstrapServers(kafka.Prod, false)
+bootstrapServers := dskafka.GetBootstrapServers(dskafka.Prod, false)
 // Returns: ["b0.kafka.ds.local:9095", "b1.kafka.ds.local:9095", "b2.kafka.ds.local:9095"]
 
 // Use internal hostnames (for in-cluster communication)
-bootstrapServers := dskafka.GetBootstrapServers(kafka.Prod, true)
+bootstrapServers := dskafka.GetBootstrapServers(dskafka.Prod, true)
 // Returns: ["kafka.kafka.svc.cluster.local:9092"]
 ```
 
@@ -189,9 +189,9 @@ bootstrapServers := dskafka.GetBootstrapServers(kafka.Prod, true)
 You can customize the configuration instead of using defaults:
 
 ```go
-config := kafka.Config{
+config := dskafka.Config{
     Brokers: []string{"localhost:9092", "localhost:9093"},
-    ClientCredentials: kafka.ClientCredentials{
+    ClientCredentials: dskafka.ClientCredentials{
         Username: "user",
         Password: "pass",
     },
