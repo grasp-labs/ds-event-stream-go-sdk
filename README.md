@@ -152,7 +152,7 @@ The SDK supports two environments and two hostname types (internal/external), cr
 | Environment | Hostname Type | Bootstrap Servers |
 |-------------|----------------|-------------------|
 | Development | External       | `b0.dev.kafka.ds.local:9095` |
-| Development | Internal       | `kafka-dev.kafka.svc.cluster.local:9092` |
+| Development | Internal       | `kafka.kafka-dev.svc.cluster.local:9092` |
 | Production  | External       | `b0.kafka.ds.local:9095`, `b1.kafka.ds.local:9095`, `b2.kafka.ds.local:9095` |
 | Production  | Internal       | `kafka.kafka.svc.cluster.local:9092` |
 
