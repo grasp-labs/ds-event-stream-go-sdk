@@ -44,7 +44,7 @@ func main() {
     // Create producer
     producer, err := dskafka.NewProducer(config)
     if err != nil {
-        log.Fatal("Failed to create producer:", err)
+        log.Panic("Failed to create producer:", err)
     }
     defer producer.Close()
     
