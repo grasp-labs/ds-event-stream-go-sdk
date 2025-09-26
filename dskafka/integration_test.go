@@ -32,10 +32,10 @@ func TestIntegrationSendEvent(t *testing.T) {
 		Password: password,
 	}
 
-	boostrapServers := GetBootstrapServers(Dev, false)
+	bootstrapServers := GetBootstrapServers(Dev, false)
 
 	// Setup real Kafka configuration
-	config := DefaultProducerConfig(credentials, boostrapServers)
+	config := DefaultProducerConfig(credentials, bootstrapServers)
 
 	producer, err := NewProducer(config)
 	if err != nil {
@@ -96,10 +96,10 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 		Password: password,
 	}
 
-	boostrapServers := GetBootstrapServers(Dev, false)
+	bootstrapServers := GetBootstrapServers(Dev, false)
 
 	// Setup real Kafka configuration
-	config := DefaultProducerConfig(credentials, boostrapServers)
+	config := DefaultProducerConfig(credentials, bootstrapServers)
 
 	producer, err := NewProducer(config)
 	if err != nil {
