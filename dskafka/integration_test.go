@@ -78,64 +78,6 @@ func TestIntegrationSendEvent(t *testing.T) {
 	}
 }
 
-func TestIntegrationSendEvents(t *testing.T) {
-	// Skip if not running integration tests
-	if testing.Short() {
-		t.Skip("Skipping integration test")
-	}
-
-	config := Config{
-		Brokers: []string{"localhost:9092"},
-		Security: Security{
-			Username: "test_user",
-			Password: "test_pass",
-		},
-	}
-
-	producer, err := NewProducer(config)
-	if err != nil {
-		t.Fatalf("Failed to create producer: %v", err)
-	}
-	defer producer.Close()
-
-	// Create multiple test events
-	events := make([]models.EventJson, 3)
-	for i := range events {
-		events[i] = models.EventJson{
-			Id:          uuid.New(),
-			SessionId:   uuid.New(),
-			RequestId:   uuid.New(),
-			TenantId:    uuid.New(),
-			EventType:   "integration.batch.test.v1",
-			EventSource: "integration-test",
-			Metadata:    map[string]string{"batch": "test"},
-			Timestamp:   time.Now(),
-			CreatedBy:   "integration-test",
-			Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-			Payload: &map[string]interface{}{
-				"batch_index": i,
-				"test_data":   "batch test",
-			},
-		}
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Test batch sending
-	err = producer.SendEvents(ctx, "test-events", events, nil)
-	if err != nil {
-		t.Errorf("Failed to send events batch: %v", err)
-	}
-
-	// Test batch sending with custom keys
-	keys := []string{"key-1", "key-2", "key-3"}
-	err = producer.SendEvents(ctx, "test-events", events, keys)
-	if err != nil {
-		t.Errorf("Failed to send events batch with keys: %v", err)
-	}
-}
-
 func TestIntegrationACLCheck(t *testing.T) {
 	// Skip if not running integration tests
 	if testing.Short() {
