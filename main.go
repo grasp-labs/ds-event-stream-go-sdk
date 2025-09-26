@@ -35,7 +35,11 @@ func main() {
 	if err != nil {
 		log.Fatal("Failed to create producer:", err)
 	}
-	defer producer.Close()
+	defer func() {
+		if err := producer.Close(); err != nil {
+			log.Printf("Failed to close producer: %v", err)
+		}
+	}()
 
 	// Create an event
 	event := models.EventJson{

@@ -268,6 +268,9 @@ make test
 # Run tests with coverage
 make test-coverage
 
+# Run integration tests (requires real Kafka)
+make integration-test
+
 # Full validation
 make check
 ```
