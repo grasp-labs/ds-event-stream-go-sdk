@@ -1,9 +1,10 @@
-package kafka
+package dskafka
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
@@ -138,12 +139,17 @@ func DefaultConsumerConfig(clientCredentials ClientCredentials, bootstrapServers
 
 func NewProducer(cfg Config) (*Producer, error) {
 	if len(cfg.Brokers) == 0 {
+		log.Println("kafka: no brokers provided")
 		return nil, errors.New("kafka: no brokers provided")
 	}
 
 	transport := &kafka.Transport{}
-	mesh, _ := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
-	transport.SASL = mesh
+	mech, mecherr := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
+	if mecherr != nil {
+		log.Println("kafka: error setting up SASL mechanism:", mecherr)
+		return nil, mecherr
+	}
+	transport.SASL = mech
 
 	// Create client for ACL checks
 	client := &kafka.Client{
@@ -168,12 +174,17 @@ func NewProducer(cfg Config) (*Producer, error) {
 
 func NewConsumer(cfg Config) (*Consumer, error) {
 	if len(cfg.Brokers) == 0 {
+		log.Println("kafka: no brokers provided")
 		return nil, errors.New("kafka: no brokers provided")
 	}
 
 	transport := &kafka.Transport{}
-	mesh, _ := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
-	transport.SASL = mesh
+	mech, mecherr := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
+	if mecherr != nil {
+		log.Println("kafka: error setting up SASL mechanism:", mecherr)
+		return nil, mecherr
+	}
+	transport.SASL = mech
 
 	// Create client for ACL checks
 	client := &kafka.Client{
@@ -203,6 +214,7 @@ func (c *Consumer) Close() error {
 	var lastErr error
 	for _, reader := range c.readers {
 		if err := reader.Close(); err != nil {
+			log.Println("kafka: error closing reader:", err)
 			lastErr = err
 		}
 	}
@@ -243,6 +255,7 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 
 	reader := kafka.NewReader(readerConfig)
 	if err := reader.SetOffsetAt(context.Background(), time.Now()); err != nil {
+		log.Println("kafka: error setting offset:", err)
 		if errClose := reader.Close(); errClose != nil {
 			return nil, errors.Join(err, errClose)
 		}
@@ -264,6 +277,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
 	buf, err := json.Marshal(evt)
 	if err != nil {
+		log.Println("kafka: error marshalling event:", err)
 		return err
 	}
 
@@ -290,70 +304,19 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 		defer cancel()
 	}
 
-	return p.w.WriteMessages(writeCtx, kafka.Message{
+	werr := p.w.WriteMessages(writeCtx, kafka.Message{
 		Topic:   topic,
 		Key:     []byte(key),
 		Value:   buf,
 		Headers: kh,
 		Time:    time.Now(),
 	})
-}
 
-// SendEvents sends a batch of events efficiently to the specified topic.
-// keys[i] is optional; if provided, used for partitioning.
-// Checks topic write permissions using kafka client before sending.
-func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.EventJson, keys []string, headers ...Header) error {
-	if p == nil || p.w == nil {
-		return errors.New("kafka: producer not initialized")
+	if werr != nil {
+		log.Println("kafka: error writing message:", err)
+		return werr
 	}
-	if len(evts) == 0 {
-		return nil
-	}
-	if len(keys) > 0 && len(keys) != len(evts) {
-		return errors.New("kafka: len(keys) must match len(evts) or be zero")
-	}
-
-	kh := make([]kafka.Header, 0, len(headers)+2)
-	kh = append(kh,
-		kafka.Header{Key: "content-type", Value: []byte("application/json")},
-		kafka.Header{Key: "message-type", Value: []byte("Event")},
-	)
-	for _, h := range headers {
-		kh = append(kh, kafka.Header{Key: h.Key, Value: []byte(h.Value)})
-	}
-
-	msgs := make([]kafka.Message, 0, len(evts))
-	for i, e := range evts {
-		b, err := json.Marshal(e)
-		if err != nil {
-			return err
-		}
-		var k []byte
-		if len(keys) > 0 {
-			k = []byte(keys[i])
-		} else {
-			k = []byte(e.Id.String())
-			if string(k) == "00000000-0000-0000-0000-000000000000" {
-				k = []byte(e.SessionId.String())
-			}
-		}
-		msgs = append(msgs, kafka.Message{
-			Topic:   topic,
-			Key:     k,
-			Value:   b,
-			Headers: kh,
-			Time:    time.Now(),
-		})
-	}
-
-	writeCtx := ctx
-	if deadline, has := ctx.Deadline(); !has || time.Until(deadline) <= 0 {
-		var cancel context.CancelFunc
-		writeCtx, cancel = context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-	}
-
-	return p.w.WriteMessages(writeCtx, msgs...)
+	return nil
 }
 
 // ReadEvent reads a single event from the specified topic and returns it as EventJson.
@@ -361,9 +324,11 @@ func (p *Producer) SendEvents(ctx context.Context, topic string, evts []models.E
 // groupID is optional - if empty, will read from all partitions without consumer group semantics.
 func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...string) (*models.EventJson, error) {
 	if c == nil {
+		log.Println("kafka: consumer not initialized")
 		return nil, errors.New("kafka: consumer not initialized")
 	}
 	if topic == "" {
+		log.Println("kafka: topic is required")
 		return nil, errors.New("kafka: topic is required")
 	}
 
@@ -376,6 +341,7 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 
 	reader, err := c.getOrCreateReader(topic, gid)
 	if err != nil {
+		log.Println("kafka: error getting reader:", err)
 		return nil, err
 	}
 
@@ -388,73 +354,17 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 
 	msg, err := reader.ReadMessage(readCtx)
 	if err != nil {
+		log.Println("kafka: error reading message:", err)
 		return nil, err
 	}
 
 	var event models.EventJson
 	if err := json.Unmarshal(msg.Value, &event); err != nil {
+		log.Println("kafka: failed to unmarshal event:", err)
 		return nil, errors.New("kafka: failed to unmarshal event - " + err.Error())
 	}
 
 	return &event, nil
-}
-
-// ReadEvents reads multiple events from the specified topic with a specified limit.
-// Returns up to 'limit' events or all available events if fewer are available.
-// Blocks until at least one message is available or context is cancelled.
-// groupID is optional - if empty, will read from all partitions without consumer group semantics.
-func (c *Consumer) ReadEvents(ctx context.Context, topic string, limit int, groupID ...string) ([]models.EventJson, error) {
-	if c == nil {
-		return nil, errors.New("kafka: consumer not initialized")
-	}
-	if topic == "" {
-		return nil, errors.New("kafka: topic is required")
-	}
-	if limit <= 0 {
-		return nil, errors.New("kafka: limit must be greater than 0")
-	}
-
-	gid := ""
-	if len(groupID) > 0 {
-		gid = groupID[0]
-	} else if c.config.GroupID != "" {
-		gid = c.config.GroupID
-	}
-
-	reader, err := c.getOrCreateReader(topic, gid)
-	if err != nil {
-		return nil, err
-	}
-
-	readCtx := ctx
-	if deadline, has := ctx.Deadline(); !has || time.Until(deadline) <= 0 {
-		var cancel context.CancelFunc
-		readCtx, cancel = context.WithTimeout(ctx, 30*time.Second)
-		defer cancel()
-	}
-
-	events := make([]models.EventJson, 0, limit)
-
-	for i := 0; i < limit; i++ {
-		msg, err := reader.ReadMessage(readCtx)
-		if err != nil {
-			if i > 0 {
-				// Return what we have if we got some messages
-				break
-			}
-			return nil, err
-		}
-
-		var event models.EventJson
-		if err := json.Unmarshal(msg.Value, &event); err != nil {
-			// Skip malformed messages and continue
-			continue
-		}
-
-		events = append(events, event)
-	}
-
-	return events, nil
 }
 
 // CommitEvents manually commits the current offset for a specific topic reader.

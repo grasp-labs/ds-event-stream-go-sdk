@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package kafka
+package dskafka
 
 import (
 	"context"
