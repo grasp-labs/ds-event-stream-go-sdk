@@ -24,7 +24,7 @@ import (
     "time"
 
     "github.com/google/uuid"
-    "github.com/grasp-labs/ds-event-stream-go-sdk/kafka"
+    "github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
     "github.com/grasp-labs/ds-event-stream-go-sdk/models"
 )
 
@@ -36,15 +36,15 @@ func main() {
     }
     
     // Get bootstrap servers for your environment
-    bootstrapServers := kafka.GetBootstrapServers(kafka.Prod, false) // or kafka.Dev
+    bootstrapServers := kafka.GetBootstrapServers(dskafka.Dev, false) // or dskafka.Prod
     
     // Create producer configuration
     config := kafka.DefaultProducerConfig(credentials, bootstrapServers)
     
     // Create producer
     producer, err := kafka.NewProducer(config)
-    if err != nil {
-        log.Fatal("Failed to create producer:", err)
+    if err != nil {        
+        log.Panic("Failed to create producer:", err)
     }
     defer producer.Close()
     
@@ -68,16 +68,9 @@ func main() {
     if err != nil {
         log.Printf("Failed to send event: %v", err)
     }
-    
-    // Send multiple events
-    events := []models.EventJson{event, /* more events */}
-    err = producer.SendEvents(context.Background(), "user-events", events, nil)
-    if err != nil {
-        log.Printf("Failed to send events: %v", err)
-    }
-    
+       
     // Send with custom headers
-    headers := []kafka.Header{
+    headers := []dskafka.Header{
         {Key: "source", Value: "my-service"},
         {Key: "version", Value: "1.0"},
     }
@@ -108,15 +101,15 @@ func main() {
     }
     
     // Get bootstrap servers for your environment
-    bootstrapServers := kafka.GetBootstrapServers(kafka.Prod, false) // or kafka.Dev
-    
+    bootstrapServers := dskafka.GetBootstrapServers(dskafka.Prod, false) // or dskafka.Dev
+
     // Create consumer configuration
-    config := kafka.DefaultConsumerConfig(credentials, bootstrapServers, "my-consumer-group")
-    
+    config := dskafka.DefaultConsumerConfig(credentials, bootstrapServers, "my-consumer-group")
+
     // Create consumer
-    consumer, err := kafka.NewConsumer(config)
+    consumer, err := dskafka.NewConsumer(config)
     if err != nil {
-        log.Fatal("Failed to create consumer:", err)
+        log.Panic("Failed to create consumer:", err)
     }
     defer consumer.Close()
     
@@ -133,15 +126,7 @@ func main() {
     if err != nil {
         log.Printf("Failed to read event: %v", err)
     }
-    
-    // Read multiple events
-    events, err := consumer.ReadEvents(context.Background(), "user-events", 10)
-    if err != nil {
-        log.Printf("Failed to read events: %v", err)
-    } else {
-        log.Printf("Received %d events", len(events))
-    }
-    
+       
     // Continuous consumption
     for {
         event, err := consumer.ReadEvent(context.Background(), "user-events", "my-group")
@@ -181,21 +166,21 @@ You can get the appropriate bootstrap servers using the helper function:
 // Development environment
 
 // Use external hostnames
-bootstrapServers := kafka.GetBootstrapServers(kafka.Dev, false)
+bootstrapServers := dskafka.GetBootstrapServers(kafka.Dev, false)
 // Returns: ["b0.dev.kafka.ds.local:9095"]
 
 // Use internal hostnames (for in-cluster communication)
-bootstrapServers := kafka.GetBootstrapServers(kafka.Dev, true)
+bootstrapServers := dskafka.GetBootstrapServers(kafka.Dev, true)
 // Returns: ["kafka-dev.kafka.svc.cluster.local:9092"]
 
 // Production environment
 
 // Use external hostnames
-bootstrapServers := kafka.GetBootstrapServers(kafka.Prod, false)
+bootstrapServers := dskafka.GetBootstrapServers(kafka.Prod, false)
 // Returns: ["b0.kafka.ds.local:9095", "b1.kafka.ds.local:9095", "b2.kafka.ds.local:9095"]
 
 // Use internal hostnames (for in-cluster communication)
-bootstrapServers := kafka.GetBootstrapServers(kafka.Prod, true)
+bootstrapServers := dskafka.GetBootstrapServers(kafka.Prod, true)
 // Returns: ["kafka.kafka.svc.cluster.local:9092"]
 ```
 
@@ -235,14 +220,12 @@ config := kafka.Config{
 
 - `NewProducer(config Config) (*Producer, error)` - Create a new producer
 - `SendEvent(ctx, topic, event, headers...)` - Send a single event
-- `SendEvents(ctx, topic, events, keys, headers...)` - Send multiple events
 - `Close()` - Close the producer and free resources
 
 ### Consumer Methods
 
 - `NewConsumer(config Config) (*Consumer, error)` - Create a new consumer
 - `ReadEvent(ctx, topic, groupID...)` - Read a single event
-- `ReadEvents(ctx, topic, limit, groupID...)` - Read multiple events
 - `Close()` - Close the consumer and free resources
 
 ### Event Structure

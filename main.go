@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"time"
 
@@ -10,11 +11,17 @@ import (
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 )
 
+// pass password as argument
+// go run main.go -password=supersecret
 func main() {
+	// Get password from command line arguments
+	password := flag.String("password", "", "Kafka password")
+	flag.Parse()
+
 	// Setup credentials
 	credentials := dskafka.ClientCredentials{
 		Username: "ds.consumption.ingress.v1",
-		Password: "Z?O#8uC%ldd#zOtp",
+		Password: *password,
 	}
 
 	// Get bootstrap servers for your environment

@@ -221,50 +221,6 @@ func TestSendEventValidation(t *testing.T) {
 	}
 }
 
-func TestSendEventsValidation(t *testing.T) {
-	// Test with nil producer
-	var producer *Producer
-	ctx := context.Background()
-	events := []models.EventJson{createTestEvent()}
-
-	err := producer.SendEvents(ctx, "test-topic", events, nil)
-	if err == nil {
-		t.Error("Expected error for nil producer")
-	}
-
-	// Test with empty events slice
-	config := Config{
-		Brokers:           []string{"localhost:9092"},
-		ClientCredentials: ClientCredentials{Username: "test", Password: "test"},
-	}
-	producer, _ = NewProducer(config)
-	defer func() {
-		err := producer.Close()
-		if err != nil {
-			t.Errorf("Unexpected error on producer.Close(): %v", err)
-		}
-	}()
-
-	err = producer.SendEvents(ctx, "test-topic", []models.EventJson{}, nil)
-	if err != nil {
-		t.Errorf("Expected no error for empty events slice, got %v", err)
-	}
-
-	// Test with mismatched keys length
-	events = []models.EventJson{createTestEvent(), createTestEvent()}
-	keys := []string{"key1"} // Only one key for two events
-
-	err = producer.SendEvents(ctx, "test-topic", events, keys)
-	if err == nil {
-		t.Error("Expected error for mismatched keys length")
-	}
-
-	expectedMsg := "kafka: len(keys) must match len(evts) or be zero"
-	if err.Error() != expectedMsg {
-		t.Errorf("Expected error message '%s', got '%s'", expectedMsg, err.Error())
-	}
-}
-
 func TestHeader(t *testing.T) {
 	header := Header{
 		Key:   "test-header",
@@ -458,51 +414,6 @@ func TestReadEventValidation(t *testing.T) {
 	_, err := consumer.ReadEvent(context.Background(), "test-topic")
 	if err == nil || err.Error() != "kafka: consumer not initialized" {
 		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
-	}
-
-	// Test ReadEvents on nil consumer
-	_, err = consumer.ReadEvents(context.Background(), "test-topic", 5)
-	if err == nil || err.Error() != "kafka: consumer not initialized" {
-		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
-	}
-}
-
-func TestReadEventsValidation(t *testing.T) {
-	security := ClientCredentials{
-		Username: "test_user",
-		Password: "test_pass",
-	}
-
-	bootstrapServers := GetBootstrapServers(Dev, false)
-	groupID := "test-group"
-
-	config := DefaultConsumerConfig(security, bootstrapServers, groupID)
-	consumer, err := NewConsumer(config)
-	if err != nil {
-		t.Fatalf("Failed to create consumer: %v", err)
-	}
-	defer func() {
-		err := consumer.Close()
-		if err != nil {
-			t.Errorf("Unexpected error on consumer.Close(): %v", err)
-		}
-	}()
-
-	// Test with invalid limit
-	_, err = consumer.ReadEvents(context.Background(), "test-topic", 0)
-	if err == nil || err.Error() != "kafka: limit must be greater than 0" {
-		t.Errorf("Expected 'limit must be greater than 0' error, got %v", err)
-	}
-
-	_, err = consumer.ReadEvents(context.Background(), "test-topic", -1)
-	if err == nil || err.Error() != "kafka: limit must be greater than 0" {
-		t.Errorf("Expected 'limit must be greater than 0' error, got %v", err)
-	}
-
-	// Test with empty topic
-	_, err = consumer.ReadEvents(context.Background(), "", 5)
-	if err == nil || err.Error() != "kafka: topic is required" {
-		t.Errorf("Expected 'topic is required' error, got %v", err)
 	}
 }
 
