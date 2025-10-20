@@ -53,8 +53,8 @@ func main() {
 		SessionId:   uuid.New(),
 		RequestId:   uuid.New(),
 		TenantId:    uuid.New(),
-		EventType:   "user.created.v1",
-		EventSource: "user-service",
+		EventType:   "test.test.v1",
+		EventSource: "TEST-PRODUCER-GO",
 		CreatedBy:   "system",
 		Md5Hash:     "abcd1234567890abcd1234567890abcd",
 		Metadata:    map[string]string{"version": "1.0"},
@@ -75,6 +75,7 @@ func main() {
 		{Key: "source", Value: "my-service"},
 		{Key: "version", Value: "1.0"},
 	}
+	event.Id = uuid.New() // new ID for the new event
 	err = producer.SendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", event, headers...)
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
