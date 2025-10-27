@@ -415,7 +415,7 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 	}
 
 	reader := kafka.NewReader(readerConfig)
-	
+
 	// Only set offset manually when NOT using consumer groups
 	// Consumer groups manage their own offsets automatically
 	if groupID == "" {
@@ -611,10 +611,10 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 //	if err != nil {
 //	    return err
 //	}
-//	
+//
 //	// Process the event...
 //	processEvent(event)
-//	
+//
 //	// Commit the message after successful processing
 //	err = consumer.CommitEvents(ctx, "user-events", msg)
 func (c *Consumer) ReadEventWithMessage(ctx context.Context, topic string, groupID ...string) (*models.EventJson, kafka.Message, error) {

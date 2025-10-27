@@ -137,14 +137,14 @@ func main() {
 		if event != nil {
 			log.Printf("🎉 SUCCESS! Found message after %d attempt(s):", attempt)
 			printEventDetails(event)
-			
+
 			// Commit the message to acknowledge successful processing
 			if *groupID != "" { // Only commit when using consumer groups
 				log.Printf("💾 Committing message offset...")
 				commitCtx, commitCancel := context.WithTimeout(context.Background(), 5*time.Second)
 				err := consumer.CommitEvents(commitCtx, *topic, msg)
 				commitCancel()
-				
+
 				if err != nil {
 					log.Printf("⚠️  Failed to commit message: %v", err)
 				} else {
@@ -153,7 +153,7 @@ func main() {
 			} else {
 				log.Printf("ℹ️  No consumer group - skipping commit (offsets not tracked)")
 			}
-			
+
 			log.Println("✅ Consumer example completed successfully")
 			return
 		}
