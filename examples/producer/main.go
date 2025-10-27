@@ -14,15 +14,20 @@ import (
 // pass password as argument
 // go run main.go -password=supersecret
 func main() {
-	// Get password from command line arguments
-	log.Println("Fetching password from command line arguments")
+	// Get credentials from command line arguments
+	log.Println("Fetching credentials from command line arguments")
+	username := flag.String("username", "ds.consumption.ingress.v1", "Kafka username")
 	password := flag.String("password", "", "Kafka password")
 	flag.Parse()
+
+	if *password == "" {
+		log.Fatal("Password is required. Use -password=your-kafka-password")
+	}
 
 	log.Println("Setting up credentials")
 	// Setup credentials
 	credentials := dskafka.ClientCredentials{
-		Username: "ds.consumption.ingress.v1",
+		Username: *username,
 		Password: *password,
 	}
 

@@ -385,6 +385,12 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 		return reader, nil
 	}
 
+	// Create SASL mechanism for the reader
+	mechanism, err := scram.Mechanism(scram.SHA512, c.config.ClientCredentials.Username, c.config.ClientCredentials.Password)
+	if err != nil {
+		return nil, err
+	}
+
 	readerConfig := kafka.ReaderConfig{
 		Brokers:        c.config.Brokers,
 		Topic:          topic,
@@ -394,6 +400,12 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 		MaxWait:        c.config.MaxWait,
 		CommitInterval: c.config.CommitInterval,
 		StartOffset:    c.config.StartOffset,
+		// Add SASL authentication transport
+		Dialer: &kafka.Dialer{
+			Timeout:       10 * time.Second,
+			DualStack:     true,
+			SASLMechanism: mechanism,
+		},
 	}
 
 	// Set partition if specified (for partition-specific reading)
@@ -403,12 +415,17 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 	}
 
 	reader := kafka.NewReader(readerConfig)
-	if err := reader.SetOffsetAt(context.Background(), time.Now()); err != nil {
-		log.Println("kafka: error setting offset:", err)
-		if errClose := reader.Close(); errClose != nil {
-			return nil, errors.Join(err, errClose)
+	
+	// Only set offset manually when NOT using consumer groups
+	// Consumer groups manage their own offsets automatically
+	if groupID == "" {
+		if err := reader.SetOffsetAt(context.Background(), time.Now()); err != nil {
+			log.Println("kafka: error setting offset:", err)
+			if errClose := reader.Close(); errClose != nil {
+				return nil, errors.Join(err, errClose)
+			}
+			return nil, err
 		}
-		return nil, err
 	}
 
 	c.readers[key] = reader
@@ -569,6 +586,80 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 	}
 
 	return &event, nil
+}
+
+// ReadEventWithMessage reads an event from the specified Kafka topic and returns both
+// the parsed event and the raw Kafka message for manual offset management.
+// This method is useful when you need fine-grained control over when to commit offsets.
+//
+// The method works similarly to ReadEvent but additionally returns the kafka.Message
+// which can be used with CommitEvents for manual offset commits.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - topic: The topic to read from
+//   - groupID: Optional consumer group ID (overrides config if provided)
+//
+// Returns:
+//   - *models.EventJson: The parsed event data
+//   - kafka.Message: The raw Kafka message (needed for commits)
+//   - error: Any error that occurred during reading
+//
+// Example:
+//
+//	event, msg, err := consumer.ReadEventWithMessage(ctx, "user-events")
+//	if err != nil {
+//	    return err
+//	}
+//	
+//	// Process the event...
+//	processEvent(event)
+//	
+//	// Commit the message after successful processing
+//	err = consumer.CommitEvents(ctx, "user-events", msg)
+func (c *Consumer) ReadEventWithMessage(ctx context.Context, topic string, groupID ...string) (*models.EventJson, kafka.Message, error) {
+	if c == nil {
+		log.Println("kafka: consumer not initialized")
+		return nil, kafka.Message{}, errors.New("kafka: consumer not initialized")
+	}
+	if topic == "" {
+		log.Println("kafka: topic is required")
+		return nil, kafka.Message{}, errors.New("kafka: topic is required")
+	}
+
+	gid := ""
+	if len(groupID) > 0 {
+		gid = groupID[0]
+	} else if c.config.GroupID != "" {
+		gid = c.config.GroupID
+	}
+
+	reader, err := c.getOrCreateReader(topic, gid)
+	if err != nil {
+		log.Println("kafka: error getting reader:", err)
+		return nil, kafka.Message{}, err
+	}
+
+	readCtx := ctx
+	if deadline, has := ctx.Deadline(); !has || time.Until(deadline) <= 0 {
+		var cancel context.CancelFunc
+		readCtx, cancel = context.WithTimeout(ctx, 10*time.Second)
+		defer cancel()
+	}
+
+	msg, err := reader.ReadMessage(readCtx)
+	if err != nil {
+		log.Println("kafka: error reading message:", err)
+		return nil, kafka.Message{}, err
+	}
+
+	var event models.EventJson
+	if err := json.Unmarshal(msg.Value, &event); err != nil {
+		log.Println("kafka: failed to unmarshal event:", err)
+		return nil, kafka.Message{}, errors.New("kafka: failed to unmarshal event - " + err.Error())
+	}
+
+	return &event, msg, nil
 }
 
 // CommitEvents manually commits the offset for specific messages on a topic.
