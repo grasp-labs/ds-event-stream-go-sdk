@@ -464,6 +464,127 @@ func TestConsumerConfigEdgeCases(t *testing.T) {
 	})
 }
 
+// TestReadEventWithMessage tests the ReadEventWithMessage function that has 0% coverage
+func TestReadEventWithMessage(t *testing.T) {
+	tests := []struct {
+		name        string
+		consumer    *Consumer
+		topic       string
+		groupID     []string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "nil consumer",
+			consumer:    nil,
+			topic:       "test-topic",
+			expectError: true,
+			errorMsg:    "consumer not initialized",
+		},
+		{
+			name: "empty topic",
+			consumer: &Consumer{
+				readers: make(map[string]*kafka.Reader),
+				config: Config{
+					Brokers: []string{"localhost:9092"},
+					ClientCredentials: ClientCredentials{
+						Username: "test",
+						Password: "test",
+					},
+				},
+			},
+			topic:       "",
+			expectError: true,
+			errorMsg:    "topic is required",
+		},
+		{
+			name: "consumer with empty brokers",
+			consumer: &Consumer{
+				readers: make(map[string]*kafka.Reader),
+				config: Config{
+					Brokers: []string{},
+				},
+			},
+			topic:       "test-topic",
+			expectError: true,
+			errorMsg:    "no brokers provided",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			
+			event, msg, err := tt.consumer.ReadEventWithMessage(ctx, tt.topic, tt.groupID...)
+			
+			assert.Error(t, err)
+			assert.Nil(t, event)
+			assert.Equal(t, kafka.Message{}, msg)
+			if tt.errorMsg != "" {
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			}
+		})
+	}
+}
+
+// TestCommitEvents tests the CommitEvents function that has 0% coverage
+func TestCommitEvents(t *testing.T) {
+	tests := []struct {
+		name        string
+		consumer    *Consumer
+		topic       string
+		msgs        []kafka.Message
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "nil consumer",
+			consumer:    nil,
+			topic:       "test-topic",
+			msgs:        []kafka.Message{},
+			expectError: true,
+			errorMsg:    "consumer not initialized",
+		},
+		{
+			name: "empty topic",
+			consumer: &Consumer{
+				readers: make(map[string]*kafka.Reader),
+			},
+			topic:       "",
+			msgs:        []kafka.Message{},
+			expectError: true,
+			errorMsg:    "topic is required",
+		},
+		{
+			name: "no active reader for topic",
+			consumer: &Consumer{
+				readers: make(map[string]*kafka.Reader),
+			},
+			topic:       "non-existent-topic",
+			msgs:        []kafka.Message{},
+			expectError: true,
+			errorMsg:    "no active reader for topic",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			err := tt.consumer.CommitEvents(ctx, tt.topic, tt.msgs...)
+			
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 // Benchmark consumer operations
 func BenchmarkDefaultConsumerConfig(b *testing.B) {
 	credentials := ClientCredentials{

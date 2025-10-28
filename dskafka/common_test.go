@@ -451,6 +451,114 @@ func TestDefaultConsumerConfigEdgeCases(t *testing.T) {
 	}
 }
 
+// TestEnvironmentString tests the Environment.String() method that has 0% coverage
+func TestEnvironmentString(t *testing.T) {
+	tests := []struct {
+		name     string
+		env      Environment
+		expected string
+	}{
+		{
+			name:     "Dev environment",
+			env:      Dev,
+			expected: "Dev",
+		},
+		{
+			name:     "Prod environment",
+			env:      Prod,
+			expected: "Prod",
+		},
+		{
+			name:     "Invalid environment value",
+			env:      Environment(999),
+			expected: "Environment(999)",
+		},
+		{
+			name:     "Negative environment value",
+			env:      Environment(-1),
+			expected: "Environment(-1)",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.env.String()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+// TestSystemTopicsJsonUnmarshalJSON tests the SystemTopicsJson.UnmarshalJSON method that has 0% coverage
+func TestSystemTopicsJsonUnmarshalJSON(t *testing.T) {
+	tests := []struct {
+		name        string
+		jsonInput   string
+		expected    SystemTopicsJson
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:      "valid system topic",
+			jsonInput: `"ds.core.billing.usage.created.v1"`,
+			expected:  SystemTopicsJsonDsCoreBillingUsageCreatedV1,
+		},
+		{
+			name:      "valid workflow topic",
+			jsonInput: `"ds.workflow.pipeline.job.requested.v1"`,
+			expected:  "ds.workflow.pipeline.job.requested.v1",
+		},
+		{
+			name:      "valid pipeline topic",
+			jsonInput: `"ds.pipeline.synchronizer.job.completed.v1"`,
+			expected:  "ds.pipeline.synchronizer.job.completed.v1",
+		},
+		{
+			name:        "invalid topic",
+			jsonInput:   `"invalid.topic.name"`,
+			expectError: true,
+			errorMsg:    "invalid value",
+		},
+		{
+			name:        "empty string",
+			jsonInput:   `""`,
+			expectError: true,
+			errorMsg:    "invalid value",
+		},
+		{
+			name:        "null value",
+			jsonInput:   `null`,
+			expectError: true,
+		},
+		{
+			name:        "invalid JSON",
+			jsonInput:   `invalid-json`,
+			expectError: true,
+		},
+		{
+			name:        "number instead of string",
+			jsonInput:   `123`,
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var topic SystemTopicsJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &topic)
+			
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, topic)
+			}
+		})
+	}
+}
+
 // Benchmark tests for common operations
 func BenchmarkGetBootstrapServers(b *testing.B) {
 	b.ResetTimer()
