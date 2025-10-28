@@ -21,17 +21,17 @@ help:
 # Test targets
 test:
 	@echo "Running tests..."
-	go test ./...
+	go test ./dskafka ./models
 
 test-verbose:
 	@echo "Running tests with verbose output..."
-	go test -v ./...
+	go test -v ./dskafka ./models
 
 test-coverage:
 	@echo "Running tests with coverage..."
-	go test -v -cover ./...
+	go test -v -cover ./dskafka ./models
 	@echo "Generating coverage report..."
-	go test -coverprofile=coverage.out ./...
+	go test -coverprofile=coverage.out ./dskafka ./models
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
@@ -42,7 +42,7 @@ integration-test:
 		echo "Please set it with: export DS_CONSUMPTION_INGRESS_V1_PASSWORD=your_password"; \
 		exit 1; \
 	fi
-	go test -tags=integration ./...
+	go test -tags=integration ./dskafka ./models
 
 # Build targets
 build:

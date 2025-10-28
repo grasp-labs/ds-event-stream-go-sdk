@@ -1,18 +1,19 @@
 # Simple Kafka Consumer Example
 
-This example demonstrates how to use the DS Event Stream Go SDK to consume a single event from a Kafka topic and exit.
+This example demonstrates how to use the DS Event Stream Go SDK to consume events from a Kafka topic. It loops until it finds at least one message or reaches the configured limits.
 
 ## Features
 
-- **Simple single event consumption**: Reads one event and exits
-- **Configurable timeout**: Set how long to wait for an event
+- **Persistent message search**: Loops until finding at least one message
+- **Configurable retry behavior**: Set maximum attempts and total timeout
 - **Flexible topic selection**: Choose which topic to consume from
 - **Event details display**: Shows formatted event information
 - **Enhanced error handling**: Detailed explanations for common connection issues
 - **Connection diagnostics**: Shows bootstrap servers for debugging
-- **Successful timeouts**: Gracefully handles empty topics without errors
+- **Smart timeout handling**: Uses short timeouts per attempt with overall limit
+- **Progress feedback**: Shows real-time progress of consumption attempts
 
-> ✅ **Status**: Recently tested and working successfully with timeout handling
+> ✅ **Status**: Recently updated with robust looping and retry logic
 
 ## Usage
 
@@ -38,7 +39,8 @@ go run main.go -username=your-username -password=your-kafka-password
 | `-password` | string | - | Kafka SASL password (required) |
 | `-group` | string | `example-consumer-group` | Consumer group ID |
 | `-topic` | string | `ds.workflow.pipeline.job.requested.v1` | Kafka topic to consume from |
-| `-timeout` | duration | `30s` | Timeout for waiting for an event |
+| `-timeout` | duration | `30s` | Total timeout for finding a message |
+| `-max-attempts` | int | `10` | Maximum number of read attempts |
 
 ### Examples
 
@@ -47,7 +49,12 @@ go run main.go -username=your-username -password=your-kafka-password
 go run main.go -password=supersecret
 ```
 
-2. **Custom username and password**:
+2. **Quick test with shorter timeout**:
+```bash
+go run main.go -password=supersecret -timeout=10s -max-attempts=3
+```
+
+3. **Custom username and password**:
 ```bash
 go run main.go -username=myuser -password=supersecret
 ```
