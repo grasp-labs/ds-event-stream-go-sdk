@@ -205,6 +205,22 @@ func TestNullableInt32(t *testing.T) {
 		assert.Equal(t, &val, ni.Get())
 	})
 
+	t.Run("Set and Get", func(t *testing.T) {
+		var ni NullableInt32
+		val := int32(123)
+		ni.Set(&val)
+		assert.True(t, ni.IsSet())
+		assert.Equal(t, &val, ni.Get())
+	})
+
+	t.Run("Unset", func(t *testing.T) {
+		val := int32(42)
+		ni := NewNullableInt32(&val)
+		ni.Unset()
+		assert.False(t, ni.IsSet())
+		assert.Nil(t, ni.Get())
+	})
+
 	t.Run("MarshalJSON", func(t *testing.T) {
 		val := int32(42)
 		ni := NewNullableInt32(&val)
@@ -229,6 +245,22 @@ func TestNullableInt64(t *testing.T) {
 		ni := NewNullableInt64(&val)
 		assert.True(t, ni.IsSet())
 		assert.Equal(t, &val, ni.Get())
+	})
+
+	t.Run("Set and Get", func(t *testing.T) {
+		var ni NullableInt64
+		val := int64(123456789)
+		ni.Set(&val)
+		assert.True(t, ni.IsSet())
+		assert.Equal(t, &val, ni.Get())
+	})
+
+	t.Run("Unset", func(t *testing.T) {
+		val := int64(9876543210)
+		ni := NewNullableInt64(&val)
+		ni.Unset()
+		assert.False(t, ni.IsSet())
+		assert.Nil(t, ni.Get())
 	})
 
 	t.Run("MarshalJSON", func(t *testing.T) {
@@ -257,6 +289,22 @@ func TestNullableFloat32(t *testing.T) {
 		assert.Equal(t, &val, nf.Get())
 	})
 
+	t.Run("Set and Get", func(t *testing.T) {
+		var nf NullableFloat32
+		val := float32(2.71)
+		nf.Set(&val)
+		assert.True(t, nf.IsSet())
+		assert.Equal(t, &val, nf.Get())
+	})
+
+	t.Run("Unset", func(t *testing.T) {
+		val := float32(3.14)
+		nf := NewNullableFloat32(&val)
+		nf.Unset()
+		assert.False(t, nf.IsSet())
+		assert.Nil(t, nf.Get())
+	})
+
 	t.Run("MarshalJSON", func(t *testing.T) {
 		val := float32(3.14)
 		nf := NewNullableFloat32(&val)
@@ -281,6 +329,22 @@ func TestNullableFloat64(t *testing.T) {
 		nf := NewNullableFloat64(&val)
 		assert.True(t, nf.IsSet())
 		assert.Equal(t, &val, nf.Get())
+	})
+
+	t.Run("Set and Get", func(t *testing.T) {
+		var nf NullableFloat64
+		val := 1.4142135623730951
+		nf.Set(&val)
+		assert.True(t, nf.IsSet())
+		assert.Equal(t, &val, nf.Get())
+	})
+
+	t.Run("Unset", func(t *testing.T) {
+		val := 2.718281828459045
+		nf := NewNullableFloat64(&val)
+		nf.Unset()
+		assert.False(t, nf.IsSet())
+		assert.Nil(t, nf.Get())
 	})
 
 	t.Run("MarshalJSON", func(t *testing.T) {
@@ -309,6 +373,22 @@ func TestNullableString(t *testing.T) {
 		assert.Equal(t, &val, ns.Get())
 	})
 
+	t.Run("Set and Get", func(t *testing.T) {
+		var ns NullableString
+		val := "test string"
+		ns.Set(&val)
+		assert.True(t, ns.IsSet())
+		assert.Equal(t, &val, ns.Get())
+	})
+
+	t.Run("Unset", func(t *testing.T) {
+		val := "hello world"
+		ns := NewNullableString(&val)
+		ns.Unset()
+		assert.False(t, ns.IsSet())
+		assert.Nil(t, ns.Get())
+	})
+
 	t.Run("MarshalJSON", func(t *testing.T) {
 		val := "hello world"
 		ns := NewNullableString(&val)
@@ -333,6 +413,22 @@ func TestNullableTime(t *testing.T) {
 		nt := NewNullableTime(&val)
 		assert.True(t, nt.IsSet())
 		assert.Equal(t, &val, nt.Get())
+	})
+
+	t.Run("Set and Get", func(t *testing.T) {
+		var nt NullableTime
+		val := time.Date(2024, 12, 25, 10, 30, 0, 0, time.UTC)
+		nt.Set(&val)
+		assert.True(t, nt.IsSet())
+		assert.Equal(t, &val, nt.Get())
+	})
+
+	t.Run("Unset", func(t *testing.T) {
+		val := time.Now()
+		nt := NewNullableTime(&val)
+		nt.Unset()
+		assert.False(t, nt.IsSet())
+		assert.Nil(t, nt.Get())
 	})
 
 	t.Run("MarshalJSON", func(t *testing.T) {
@@ -390,5 +486,57 @@ func TestUtilityFunctions(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "TestFunction")
 		assert.Contains(t, err.Error(), "test error message")
+	})
+}
+
+// Test IsNil function comprehensively
+func TestIsNilFunction(t *testing.T) {
+	t.Run("nil_interface", func(t *testing.T) {
+		var nilInterface interface{}
+		assert.True(t, IsNil(nilInterface))
+	})
+
+	t.Run("nil_pointer", func(t *testing.T) {
+		var nilPtr *string
+		assert.True(t, IsNil(nilPtr))
+	})
+
+	t.Run("nil_slice", func(t *testing.T) {
+		var nilSlice []int
+		assert.True(t, IsNil(nilSlice))
+	})
+
+	t.Run("nil_map", func(t *testing.T) {
+		var nilMap map[string]int
+		assert.True(t, IsNil(nilMap))
+	})
+
+	t.Run("nil_channel", func(t *testing.T) {
+		var nilChan chan int
+		assert.True(t, IsNil(nilChan))
+	})
+
+	t.Run("non_nil_values", func(t *testing.T) {
+		str := "test"
+		assert.False(t, IsNil(&str))
+		assert.False(t, IsNil([]int{1, 2, 3}))
+		assert.False(t, IsNil(map[string]int{"key": 1}))
+		assert.False(t, IsNil(make(chan int)))
+	})
+
+	t.Run("zero_array", func(t *testing.T) {
+		var zeroArray [3]int
+		assert.True(t, IsNil(zeroArray)) // Zero array should be considered nil-like
+	})
+
+	t.Run("non_zero_array", func(t *testing.T) {
+		nonZeroArray := [3]int{1, 2, 3}
+		assert.False(t, IsNil(nonZeroArray))
+	})
+
+	t.Run("non_pointer_types", func(t *testing.T) {
+		assert.False(t, IsNil(42))
+		assert.False(t, IsNil("string"))
+		assert.False(t, IsNil(true))
 	})
 }
