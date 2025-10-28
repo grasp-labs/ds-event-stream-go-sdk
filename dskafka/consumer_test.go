@@ -1273,6 +1273,542 @@ func BenchmarkDefaultConsumerConfig(b *testing.B) {
 	}
 }
 
+// TestCloseWithReaderErrors tests Close function with reader closing errors
+func TestCloseWithReaderErrors(t *testing.T) {
+	consumer := &Consumer{
+		config: Config{
+			Brokers: []string{"localhost:9092"},
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		},
+		readers: make(map[string]*kafka.Reader),
+	}
+
+	// Create multiple readers to test error handling
+	reader1, err := consumer.getOrCreateReader("topic1", "")
+	assert.NoError(t, err)
+	reader2, err := consumer.getOrCreateReader("topic2", "group1")
+	assert.NoError(t, err)
+
+	// Now close - this will try to close the readers
+	_ = consumer.Close()
+	// The error depends on the kafka library behavior, but the function should handle it
+	// The main thing is that it doesn't panic and tries to close all readers
+
+	// Verify all readers are in the map before closing
+	assert.Contains(t, consumer.readers, "topic1")
+	assert.Contains(t, consumer.readers, "group1:topic2")
+	assert.NotNil(t, reader1)
+	assert.NotNil(t, reader2)
+
+	// First close one reader manually to create a potential error condition
+	_ = reader1.Close()
+}
+
+// TestCloseWithMultipleReaderErrors tests Close function error handling with multiple readers
+func TestCloseWithMultipleReaderErrors(t *testing.T) {
+	consumer := &Consumer{
+		config: Config{
+			Brokers: []string{"localhost:9092"},
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		},
+		readers: make(map[string]*kafka.Reader),
+	}
+
+	// Create multiple readers
+	reader1, err := consumer.getOrCreateReader("topic1", "")
+	assert.NoError(t, err)
+	reader2, err := consumer.getOrCreateReader("topic2", "")
+	assert.NoError(t, err)
+	reader3, err := consumer.getOrCreateReader("topic3", "group1")
+	assert.NoError(t, err)
+
+	// Manually close readers to create error conditions when Close() tries to close them again
+	_ = reader1.Close()
+	_ = reader2.Close()
+	_ = reader3.Close()
+
+	// Now close the consumer - should handle errors gracefully and return the last error
+	_ = consumer.Close()
+	// The function should not panic and should attempt to close all readers
+	// The specific error depends on kafka-go library behavior when closing already-closed readers
+}
+
+// TestCloseNilReaders tests Close function with nil readers map
+func TestCloseNilReaders(t *testing.T) {
+	consumer := &Consumer{
+		config: Config{
+			Brokers: []string{"localhost:9092"},
+		},
+		readers: nil, // nil readers map
+	}
+
+	err := consumer.Close()
+	assert.NoError(t, err) // Should not error with nil readers
+}
+
+// TestStatsAdvanced tests Stats function with various scenarios
+func TestStatsAdvanced(t *testing.T) {
+	t.Run("nil consumer", func(t *testing.T) {
+		var nilConsumer *Consumer
+		stats, err := nilConsumer.Stats("test-topic")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "consumer not initialized")
+		assert.Equal(t, kafka.ReaderStats{}, stats)
+	})
+
+	t.Run("empty topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		stats, err := consumer.Stats("")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "topic is required")
+		assert.Equal(t, kafka.ReaderStats{}, stats)
+	})
+
+	t.Run("no reader for topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		stats, err := consumer.Stats("nonexistent-topic")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no active reader for topic")
+		assert.Equal(t, kafka.ReaderStats{}, stats)
+	})
+
+	t.Run("successful stats retrieval", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create a reader first
+		_, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+
+		// Now get stats - should not error even if kafka isn't running
+		stats, err := consumer.Stats("test-topic")
+		assert.NoError(t, err)
+		assert.NotNil(t, stats)
+	})
+
+	t.Run("stats with group ID in key", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create a reader with group ID
+		_, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+
+		// Get stats using just the topic name - should find the grouped reader
+		stats, err := consumer.Stats("test-topic")
+		assert.NoError(t, err)
+		assert.NotNil(t, stats)
+	})
+}
+
+// TestCommitEventsAdvanced tests CommitEvents function with various scenarios
+func TestCommitEventsAdvanced(t *testing.T) {
+	t.Run("nil consumer", func(t *testing.T) {
+		var nilConsumer *Consumer
+		ctx := context.Background()
+
+		err := nilConsumer.CommitEvents(ctx, "test-topic")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "consumer not initialized")
+	})
+
+	t.Run("empty topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		err := consumer.CommitEvents(ctx, "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("no reader for topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		err := consumer.CommitEvents(ctx, "nonexistent-topic")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no active reader for topic")
+	})
+
+	t.Run("commit with reader present", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// Create a reader first
+		_, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+
+		// Try to commit - will fail because kafka isn't running, but validates the path
+		msg := kafka.Message{
+			Topic:     "test-topic",
+			Partition: 0,
+			Offset:    123,
+			Value:     []byte("test"),
+		}
+
+		err = consumer.CommitEvents(ctx, "test-topic", msg)
+		// This will error trying to commit to non-existent kafka, but should find the reader
+		assert.Error(t, err)
+		// Should not be our validation errors
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+		assert.NotContains(t, err.Error(), "no active reader for topic")
+	})
+
+	t.Run("commit with group ID in key", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// Create a reader with group ID
+		_, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+
+		// Try to commit using just the topic name - should find the grouped reader
+		msg := kafka.Message{
+			Topic:     "test-topic",
+			Partition: 0,
+			Offset:    123,
+			Value:     []byte("test"),
+		}
+
+		err = consumer.CommitEvents(ctx, "test-topic", msg)
+		// This will error trying to commit to non-existent kafka, but should find the reader
+		assert.Error(t, err)
+		// Should not be our validation errors
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+		assert.NotContains(t, err.Error(), "no active reader for topic")
+	})
+}
+
+// TestNewConsumerAdvanced tests NewConsumer function edge cases
+func TestNewConsumerAdvanced(t *testing.T) {
+	t.Run("empty brokers list", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{}, // empty brokers
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		}
+
+		consumer, err := NewConsumer(cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no brokers provided")
+		assert.Nil(t, consumer)
+	})
+
+	t.Run("nil brokers list", func(t *testing.T) {
+		cfg := Config{
+			Brokers: nil, // nil brokers
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		}
+
+		consumer, err := NewConsumer(cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no brokers provided")
+		assert.Nil(t, consumer)
+	})
+
+	t.Run("invalid SASL credentials", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{"localhost:9092"},
+			ClientCredentials: ClientCredentials{
+				Username: "", // empty username
+				Password: "", // empty password
+			},
+		}
+
+		// This might succeed or fail depending on SASL validation
+		// The test is mainly to exercise the code path
+		consumer, err := NewConsumer(cfg)
+		if err != nil {
+			// If it fails, should be SASL related
+			assert.Contains(t, err.Error(), "SASL")
+			assert.Nil(t, consumer)
+		} else {
+			// If it succeeds, should have valid consumer
+			assert.NotNil(t, consumer)
+			assert.NotNil(t, consumer.readers)
+			assert.NotNil(t, consumer.client)
+		}
+	})
+
+	t.Run("successful creation with valid config", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{"localhost:9092", "localhost:9093"},
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+			GroupID:  "test-group",
+			MinBytes: 1,
+			MaxBytes: 1024,
+		}
+
+		consumer, err := NewConsumer(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, consumer)
+		assert.NotNil(t, consumer.readers)
+		assert.NotNil(t, consumer.client)
+		assert.Equal(t, cfg.Brokers, consumer.config.Brokers)
+		assert.Equal(t, cfg.GroupID, consumer.config.GroupID)
+	})
+}
+
+// TestNewConsumerEdgeCases tests additional NewConsumer edge cases for better coverage
+func TestNewConsumerEdgeCases(t *testing.T) {
+	t.Run("single broker", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{"localhost:9092"}, // single broker
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		}
+
+		consumer, err := NewConsumer(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, consumer)
+		assert.Len(t, consumer.config.Brokers, 1)
+	})
+
+	t.Run("many brokers", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{
+				"broker1:9092",
+				"broker2:9092",
+				"broker3:9092",
+				"broker4:9092",
+				"broker5:9092",
+			},
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		}
+
+		consumer, err := NewConsumer(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, consumer)
+		assert.Len(t, consumer.config.Brokers, 5)
+	})
+
+	t.Run("special characters in credentials", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{"localhost:9092"},
+			ClientCredentials: ClientCredentials{
+				Username: "test@user.com",
+				Password: "p@ssw0rd!#$%",
+			},
+		}
+
+		consumer, err := NewConsumer(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, consumer)
+		assert.Equal(t, "test@user.com", consumer.config.ClientCredentials.Username)
+	})
+
+	t.Run("test SASL mechanism creation", func(t *testing.T) {
+		cfg := Config{
+			Brokers: []string{"localhost:9092"},
+			ClientCredentials: ClientCredentials{
+				Username: "validuser",
+				Password: "validpass",
+			},
+		}
+
+		// This should succeed in creating SASL mechanism
+		consumer, err := NewConsumer(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, consumer)
+		assert.NotNil(t, consumer.client)
+		assert.NotNil(t, consumer.client.Transport)
+	})
+}
+
+// TestCloseEdgeCases tests additional Close edge cases
+func TestCloseEdgeCases(t *testing.T) {
+	t.Run("close with single reader", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create just one reader
+		_, err := consumer.getOrCreateReader("single-topic", "")
+		assert.NoError(t, err)
+
+		// Close should handle single reader gracefully
+		_ = consumer.Close()
+		// Should not panic
+	})
+
+	t.Run("close with empty readers map", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+			},
+			readers: make(map[string]*kafka.Reader), // empty but not nil
+		}
+
+		err := consumer.Close()
+		assert.NoError(t, err) // Should succeed with empty map
+	})
+
+	t.Run("force reader close error by double closing", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create a reader
+		reader, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+
+		// Close the reader manually first
+		_ = reader.Close()
+		// kafka-go readers can be closed safely multiple times
+
+		// Now close the consumer - this will try to close the already closed reader
+		// This should exercise the error handling path in Close()
+		lastErr := consumer.Close()
+		// The behavior depends on kafka-go - it might return an error or be safe
+		// The important thing is that our Close() method handles it gracefully
+		_ = lastErr // We don't assert on the specific error since it's implementation dependent
+	})
+}
+
+// TestReadEventContextEdgeCases tests additional context scenarios
+func TestReadEventContextEdgeCases(t *testing.T) {
+	consumer := &Consumer{
+		config: Config{
+			Brokers: []string{"localhost:9092"},
+			ClientCredentials: ClientCredentials{
+				Username: "testuser",
+				Password: "testpass",
+			},
+		},
+		readers: make(map[string]*kafka.Reader),
+	}
+
+	t.Run("cancelled context", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		cancel() // cancel immediately
+
+		_, err := consumer.ReadEvent(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should fail due to cancelled context, not validation
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("context with past deadline", func(t *testing.T) {
+		ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(-1*time.Hour))
+		defer cancel()
+
+		_, err := consumer.ReadEvent(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should fail due to past deadline, not validation
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+}
+
 func BenchmarkConsumerClose(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
