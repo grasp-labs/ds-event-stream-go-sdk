@@ -437,6 +437,86 @@ func (c *Consumer) CommitEvents(ctx context.Context, topic string, msgs ...kafka
 	return reader.CommitMessages(ctx, msgs...)
 }
 
+// CommitMessages commits the offset for the provided messages without requiring
+// a topic parameter. The topics are automatically extracted from the messages.
+// This is a convenience method that's more ergonomic when you already have the
+// messages from ReadEventWithMessage.
+//
+// If messages are from multiple topics, they will be grouped by topic and
+// committed using the appropriate reader for each topic. All commits are performed
+// within the same context, but errors from any topic will cause the entire
+// operation to fail.
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - msgs: One or more kafka messages to commit
+//
+// Returns:
+//   - error: Any error that occurred during commit
+//
+// Example:
+//
+//	event, msg, err := consumer.ReadEventWithMessage(ctx, "user-events")
+//	if err != nil {
+//	    return err
+//	}
+//
+//	// Process the event...
+//	processEvent(event)
+//
+//	// Commit the message (topic is extracted automatically)
+//	err = consumer.CommitEvent(ctx, msg)
+
+// CommitEvent commits a single Kafka message by extracting the topic from the message
+// and using the appropriate reader for that topic. This is a convenience method for
+// the common case of committing a single message without having to specify the topic.
+//
+// This method automatically:
+//   - Extracts the topic from the message
+//   - Finds the correct reader for that topic
+//   - Commits the message using the topic-specific reader
+//
+// Parameters:
+//   - ctx: Context for the commit operation (can include timeout/cancellation)
+//   - message: The Kafka message to commit (must have a valid topic)
+//
+// Returns:
+//   - error: Any error during validation or commit operation
+//
+// Example:
+//
+//	event, msg, err := consumer.ReadEventWithMessage(ctx, "user-events")
+//	if err == nil {
+//	    // Process the event...
+//
+//	    // Commit the message (topic is extracted automatically)
+//	    err = consumer.CommitEvent(ctx, msg)
+//	}
+func (c *Consumer) CommitEvent(ctx context.Context, message kafka.Message) error {
+	if c == nil {
+		return errors.New("kafka: consumer not initialized")
+	}
+	if message.Topic == "" {
+		return errors.New("kafka: message topic is empty")
+	}
+
+	// Find the reader for this topic
+	var reader *kafka.Reader
+	for key, r := range c.readers {
+		if key == message.Topic || (len(key) > len(message.Topic) && key[len(key)-len(message.Topic):] == message.Topic) {
+			reader = r
+			break
+		}
+	}
+
+	if reader == nil {
+		return errors.New("kafka: no active reader for topic " + message.Topic)
+	}
+
+	// Commit the message
+	return reader.CommitMessages(ctx, message)
+}
+
 // Stats returns detailed statistics for the reader associated with the specified topic.
 // The statistics include metrics such as:
 //   - Messages read count

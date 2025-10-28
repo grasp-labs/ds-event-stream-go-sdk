@@ -155,7 +155,7 @@ func main() {
 			// Commit the message to acknowledge successful processing
 			log.Printf("💾 Committing message offset...")
 			commitCtx, commitCancel := context.WithTimeout(context.Background(), 5*time.Second)
-			err := consumer.CommitEvents(commitCtx, *topic, msg)
+			err := consumer.CommitEvent(commitCtx, msg)
 			commitCancel()
 
 			if err != nil {

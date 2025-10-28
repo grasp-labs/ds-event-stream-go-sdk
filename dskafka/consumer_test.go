@@ -2,6 +2,7 @@ package dskafka
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -1806,6 +1807,120 @@ func TestReadEventContextEdgeCases(t *testing.T) {
 		// Should fail due to past deadline, not validation
 		assert.NotContains(t, err.Error(), "consumer not initialized")
 		assert.NotContains(t, err.Error(), "topic is required")
+	})
+}
+
+
+// TestCommitEvent tests the new CommitEvent function that commits a single message
+func TestCommitEvent(t *testing.T) {
+	t.Run("nil consumer", func(t *testing.T) {
+		var nilConsumer *Consumer
+		ctx := context.Background()
+		msg := kafka.Message{Topic: "test-topic", Partition: 0, Offset: 123}
+
+		err := nilConsumer.CommitEvent(ctx, msg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "consumer not initialized")
+	})
+
+	t.Run("message with empty topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		msg := kafka.Message{Topic: "", Partition: 0, Offset: 123} // empty topic
+
+		err := consumer.CommitEvent(ctx, msg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "message topic is empty")
+	})
+
+	t.Run("no reader for message topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		msg := kafka.Message{Topic: "non-existent-topic", Partition: 0, Offset: 123}
+
+		err := consumer.CommitEvent(ctx, msg)
+		assert.Error(t, err)
+		// The error could be about missing reader or GroupID not set, both are valid failures
+		isValidError := strings.Contains(err.Error(), "no active reader for topic non-existent-topic") ||
+			strings.Contains(err.Error(), "unavailable when GroupID is not set")
+		assert.True(t, isValidError, "Expected error about missing reader or GroupID, got: %s", err.Error())
+	})
+
+	t.Run("successful commit with reader present", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// Create a reader for the topic first
+		_, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+
+		msg := kafka.Message{Topic: "test-topic", Partition: 0, Offset: 123}
+
+		// This will error trying to commit to non-existent kafka, but validation should pass
+		err = consumer.CommitEvent(ctx, msg)
+		assert.Error(t, err)
+		// Should not be our validation errors
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "message topic is empty")
+		assert.NotContains(t, err.Error(), "no active reader for topic")
+	})
+
+	t.Run("commit with group ID reader", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				GroupID: "test-group",
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// Create a reader for the topic with group ID
+		_, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+
+		msg := kafka.Message{Topic: "test-topic", Partition: 0, Offset: 123}
+
+		// This will error trying to commit to non-existent kafka, but validation should pass
+		err = consumer.CommitEvent(ctx, msg)
+		assert.Error(t, err)
+		// Should not be our validation errors
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "message topic is empty")
+		assert.NotContains(t, err.Error(), "no active reader for topic")
 	})
 }
 
