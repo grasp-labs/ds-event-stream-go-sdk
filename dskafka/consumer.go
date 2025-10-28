@@ -172,6 +172,11 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 		return nil, errors.New("kafka: consumer not initialized")
 	}
 
+	// Validate brokers configuration
+	if len(c.config.Brokers) == 0 {
+		return nil, errors.New("kafka: no brokers provided")
+	}
+
 	key := topic
 	if groupID != "" {
 		key = groupID + ":" + topic

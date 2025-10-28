@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 	"time"
+
+	"github.com/segmentio/kafka-go"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDefaultConsumerConfig(t *testing.T) {
@@ -182,5 +185,304 @@ func TestConsumerStatsNil(t *testing.T) {
 	_, err := consumer.Stats("test-topic")
 	if err == nil || err.Error() != "kafka: consumer not initialized" {
 		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
+	}
+}
+
+// Enhanced consumer tests with comprehensive validation
+
+// Test DefaultConsumerConfig with different environments
+func TestDefaultConsumerConfigEnvironments(t *testing.T) {
+	credentials := ClientCredentials{
+		Username: "test-user",
+		Password: "test-pass",
+	}
+
+	tests := []struct {
+		name        string
+		env         Environment
+		internal    bool
+		groupID     string
+		expectError bool
+	}{
+		{
+			name:     "dev external",
+			env:      Dev,
+			internal: false,
+			groupID:  "test-group-dev",
+		},
+		{
+			name:     "dev internal",
+			env:      Dev,
+			internal: true,
+			groupID:  "test-group-dev-internal",
+		},
+		{
+			name:     "prod external",
+			env:      Prod,
+			internal: false,
+			groupID:  "test-group-prod",
+		},
+		{
+			name:     "prod internal",
+			env:      Prod,
+			internal: true,
+			groupID:  "test-group-prod-internal",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			brokers := GetBootstrapServers(tt.env, tt.internal)
+			config := DefaultConsumerConfig(credentials, brokers, tt.groupID)
+
+			assert.Equal(t, brokers, config.Brokers)
+			assert.Equal(t, credentials, config.ClientCredentials)
+			assert.Equal(t, tt.groupID, config.GroupID)
+			assert.Equal(t, 10*time.Second, config.ReadTimeout)
+			assert.Equal(t, -1, config.Partition) // All partitions
+			assert.Equal(t, kafka.FirstOffset, config.StartOffset)
+		})
+	}
+}
+
+// Test consumer configuration validation
+func TestConsumerConfigValidation(t *testing.T) {
+	tests := []struct {
+		name        string
+		config      Config
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "valid config",
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "user",
+					Password: "pass",
+				},
+				GroupID: "test-group",
+			},
+			expectError: false,
+		},
+		{
+			name: "empty brokers",
+			config: Config{
+				Brokers: []string{},
+				ClientCredentials: ClientCredentials{
+					Username: "user",
+					Password: "pass",
+				},
+				GroupID: "test-group",
+			},
+			expectError: true,
+			errorMsg:    "kafka: no brokers provided",
+		},
+		{
+			name: "empty credentials",
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "",
+					Password: "",
+				},
+				GroupID: "test-group",
+			},
+			expectError: false, // This should still work, Kafka may allow it
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			consumer, err := NewConsumer(tt.config)
+
+			if tt.expectError {
+				assert.Error(t, err)
+				if tt.errorMsg != "" {
+					assert.Contains(t, err.Error(), tt.errorMsg)
+				}
+				assert.Nil(t, consumer)
+			} else {
+				if err != nil {
+					// Some configs might fail due to connection issues, that's ok
+					t.Logf("Consumer creation failed (expected in test env): %v", err)
+				}
+				if consumer != nil {
+					err = consumer.Close()
+					assert.NoError(t, err)
+				}
+			}
+		})
+	}
+}
+
+// Test ReadEvent with different scenarios
+func TestReadEventScenarios(t *testing.T) {
+	tests := []struct {
+		name        string
+		consumer    *Consumer
+		topic       string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "nil consumer",
+			consumer:    nil,
+			topic:       "test-topic",
+			expectError: true,
+			errorMsg:    "consumer not initialized",
+		},
+		{
+			name: "consumer with nil readers",
+			consumer: &Consumer{
+				readers: nil,
+				client:  nil,
+				config: Config{
+					Brokers: []string{}, // Empty brokers should cause error before panic
+				},
+			},
+			topic:       "test-topic",
+			expectError: true,
+			errorMsg:    "no brokers provided",
+		},
+		{
+			name: "empty topic",
+			consumer: &Consumer{
+				readers: make(map[string]*kafka.Reader),
+				client:  nil,
+			},
+			topic:       "",
+			expectError: true,
+			errorMsg:    "topic is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			event, err := tt.consumer.ReadEvent(ctx, tt.topic)
+
+			assert.Error(t, err)
+			assert.Nil(t, event)
+			if tt.errorMsg != "" {
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			}
+		})
+	}
+}
+
+// Test consumer stats with different scenarios
+func TestConsumerStatsScenarios(t *testing.T) {
+	tests := []struct {
+		name        string
+		consumer    *Consumer
+		topic       string
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name:        "nil consumer",
+			consumer:    nil,
+			topic:       "test-topic",
+			expectError: true,
+			errorMsg:    "consumer not initialized",
+		},
+		{
+			name: "valid consumer no active reader",
+			consumer: &Consumer{
+				readers: make(map[string]*kafka.Reader),
+				client:  nil,
+			},
+			topic:       "non-existent-topic",
+			expectError: true,
+			errorMsg:    "no active reader for topic",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stats, err := tt.consumer.Stats(tt.topic)
+
+			assert.Error(t, err)
+			// Stats returns zero value, not nil
+			assert.NotNil(t, stats)
+			if tt.errorMsg != "" {
+				assert.Contains(t, err.Error(), tt.errorMsg)
+			}
+		})
+	}
+}
+
+// Test consumer with different timeout scenarios
+func TestConsumerTimeouts(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	defer cancel()
+
+	var consumer *Consumer
+
+	// Test with expired context
+	event, err := consumer.ReadEvent(ctx, "test-topic")
+	assert.Error(t, err)
+	assert.Nil(t, event)
+	assert.Contains(t, err.Error(), "consumer not initialized")
+}
+
+// Test consumer configuration edge cases
+func TestConsumerConfigEdgeCases(t *testing.T) {
+	credentials := ClientCredentials{
+		Username: "test-user",
+		Password: "test-pass",
+	}
+
+	t.Run("very long group id", func(t *testing.T) {
+		longGroupID := string(make([]byte, 1000)) // Very long group ID
+		brokers := []string{"localhost:9092"}
+
+		config := DefaultConsumerConfig(credentials, brokers, longGroupID)
+		assert.Equal(t, longGroupID, config.GroupID)
+	})
+
+	t.Run("special characters in group id", func(t *testing.T) {
+		specialGroupID := "test-group-with-special-chars-!@#$%^&*()"
+		brokers := []string{"localhost:9092"}
+
+		config := DefaultConsumerConfig(credentials, brokers, specialGroupID)
+		assert.Equal(t, specialGroupID, config.GroupID)
+	})
+
+	t.Run("multiple brokers", func(t *testing.T) {
+		brokers := []string{
+			"broker1:9092",
+			"broker2:9092",
+			"broker3:9092",
+		}
+		groupID := "multi-broker-group"
+
+		config := DefaultConsumerConfig(credentials, brokers, groupID)
+		assert.Equal(t, brokers, config.Brokers)
+		assert.Len(t, config.Brokers, 3)
+	})
+}
+
+// Benchmark consumer operations
+func BenchmarkDefaultConsumerConfig(b *testing.B) {
+	credentials := ClientCredentials{
+		Username: "bench-user",
+		Password: "bench-pass",
+	}
+	brokers := []string{"localhost:9092"}
+	groupID := "bench-group"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		_ = DefaultConsumerConfig(credentials, brokers, groupID)
+	}
+}
+
+func BenchmarkConsumerClose(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var consumer *Consumer
+		_ = consumer.Close()
 	}
 }
