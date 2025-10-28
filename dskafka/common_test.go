@@ -545,7 +545,7 @@ func TestSystemTopicsJsonUnmarshalJSON(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			var topic SystemTopicsJson
 			err := json.Unmarshal([]byte(tt.jsonInput), &topic)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.errorMsg != "" {

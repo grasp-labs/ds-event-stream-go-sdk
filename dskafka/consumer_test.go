@@ -515,9 +515,9 @@ func TestReadEventWithMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 			defer cancel()
-			
+
 			event, msg, err := tt.consumer.ReadEventWithMessage(ctx, tt.topic, tt.groupID...)
-			
+
 			assert.Error(t, err)
 			assert.Nil(t, event)
 			assert.Equal(t, kafka.Message{}, msg)
@@ -572,7 +572,7 @@ func TestCommitEvents(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := context.Background()
 			err := tt.consumer.CommitEvents(ctx, tt.topic, tt.msgs...)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				if tt.errorMsg != "" {
