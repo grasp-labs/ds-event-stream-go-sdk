@@ -591,8 +591,554 @@ func TestConsumerConfigEdgeCases(t *testing.T) {
 	})
 }
 
-// TestReadEventWithMessage tests the ReadEventWithMessage function that has 0% coverage
+// TestGetOrCreateReader tests the getOrCreateReader function with various validation scenarios
+func TestGetOrCreateReader(t *testing.T) {
+	t.Run("nil consumer error", func(t *testing.T) {
+		var nilConsumer *Consumer
+		_, err := nilConsumer.getOrCreateReader("test-topic", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "consumer not initialized")
+	})
+
+	t.Run("empty broker list error", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{}, // empty broker list
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		_, err := consumer.getOrCreateReader("test-topic", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no brokers provided")
+	})
+
+	t.Run("nil broker list error", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: nil, // nil broker list
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		_, err := consumer.getOrCreateReader("test-topic", "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "no brokers provided")
+	})
+
+	t.Run("creates reader with basic config", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, "test-topic", reader.Config().Topic)
+		assert.Equal(t, []string{"localhost:9092"}, reader.Config().Brokers)
+	})
+
+	t.Run("returns cached reader", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create first reader
+		reader1, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader1)
+
+		// Get same reader again - should return cached version
+		reader2, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader2)
+
+		// Should be the same reader instance
+		assert.Equal(t, reader1, reader2)
+	})
+
+	t.Run("creates reader with group ID", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes:  1,
+				MaxBytes:  1024,
+				Partition: -1, // Important: use -1 to avoid clearing group ID
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, "test-group", reader.Config().GroupID)
+	})
+
+	t.Run("creates different readers for different group IDs", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes:  1,
+				MaxBytes:  1024,
+				Partition: -1, // Important: use -1 to avoid clearing group ID
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader1, err := consumer.getOrCreateReader("test-topic", "group-1")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader1)
+
+		reader2, err := consumer.getOrCreateReader("test-topic", "group-2")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader2)
+
+		// Should be different reader instances due to different group IDs
+		assert.NotEqual(t, reader1, reader2)
+		assert.Equal(t, "group-1", reader1.Config().GroupID)
+		assert.Equal(t, "group-2", reader2.Config().GroupID)
+	})
+
+	t.Run("creates reader with empty group ID", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, "", reader.Config().GroupID)
+	})
+
+	t.Run("creates reader with custom config values", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 100,
+				MaxBytes: 2048,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, 100, reader.Config().MinBytes)
+		assert.Equal(t, 2048, reader.Config().MaxBytes)
+	})
+
+	t.Run("creates reader with multiple brokers", func(t *testing.T) {
+		brokers := []string{"localhost:9092", "localhost:9093", "localhost:9094"}
+		consumer := &Consumer{
+			config: Config{
+				Brokers: brokers,
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, brokers, reader.Config().Brokers)
+	})
+
+	t.Run("creates different readers for different topics", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader1, err := consumer.getOrCreateReader("topic-1", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader1)
+
+		reader2, err := consumer.getOrCreateReader("topic-2", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader2)
+
+		// Should be different reader instances
+		assert.NotEqual(t, reader1, reader2)
+		assert.Equal(t, "topic-1", reader1.Config().Topic)
+		assert.Equal(t, "topic-2", reader2.Config().Topic)
+	})
+
+	t.Run("partition config overrides group ID", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes:  1,
+				MaxBytes:  1024,
+				Partition: 2, // Specific partition
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		reader, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, 2, reader.Config().Partition)
+		// When partition is specified, group ID should be cleared
+		assert.Equal(t, "", reader.Config().GroupID)
+	})
+
+	t.Run("validates empty topic name", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// kafka-go doesn't allow empty topic names, this should panic/error
+		assert.Panics(t, func() {
+			consumer.getOrCreateReader("", "")
+		})
+	})
+
+	t.Run("reader caching with group ID key format", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create reader with group ID
+		reader1, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader1)
+
+		// Create reader with same topic but no group ID - should be different
+		reader2, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader2)
+
+		// Should be different readers
+		assert.NotEqual(t, reader1, reader2)
+
+		// Get the first reader again - should be cached
+		reader3, err := consumer.getOrCreateReader("test-topic", "test-group")
+		assert.NoError(t, err)
+		assert.Equal(t, reader1, reader3)
+	})
+
+	t.Run("successful SASL authentication setup", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				MinBytes: 1,
+				MaxBytes: 1024,
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// This should succeed - SASL mechanism can be created with any credentials
+		reader, err := consumer.getOrCreateReader("test-topic", "")
+		assert.NoError(t, err)
+		assert.NotNil(t, reader)
+		assert.Equal(t, "test-topic", reader.Config().Topic)
+	})
+}
+
+// TestReadEventWithMessage tests the ReadEventWithMessage function validation scenarios
 func TestReadEventWithMessage(t *testing.T) {
+	t.Run("nil consumer", func(t *testing.T) {
+		var nilConsumer *Consumer
+		ctx := context.Background()
+
+		event, msg, err := nilConsumer.ReadEventWithMessage(ctx, "test-topic")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "consumer not initialized")
+		assert.Nil(t, event)
+		assert.Equal(t, kafka.Message{}, msg)
+	})
+
+	t.Run("empty topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		event, msg, err := consumer.ReadEventWithMessage(ctx, "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "topic is required")
+		assert.Nil(t, event)
+		assert.Equal(t, kafka.Message{}, msg)
+	})
+
+	t.Run("uses provided group ID", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				GroupID: "default-group",
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// This will fail when trying to read from non-existent Kafka, but we can verify
+		// that the validation passes and the error comes from the read operation
+		_, _, err := consumer.ReadEventWithMessage(ctx, "test-topic", "override-group")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("uses config group ID when none provided", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				GroupID: "config-group",
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// This will fail when trying to read from non-existent Kafka, but validation should pass
+		_, _, err := consumer.ReadEventWithMessage(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("context with deadline validation", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create context with deadline
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// This will fail when trying to read from non-existent Kafka, but validation should pass
+		_, _, err := consumer.ReadEventWithMessage(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+}
+
+// TestReadEvent tests the ReadEvent function validation scenarios
+func TestReadEvent(t *testing.T) {
+	t.Run("nil consumer", func(t *testing.T) {
+		var nilConsumer *Consumer
+		ctx := context.Background()
+
+		event, err := nilConsumer.ReadEvent(ctx, "test-topic")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "consumer not initialized")
+		assert.Nil(t, event)
+	})
+
+	t.Run("empty topic", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		event, err := consumer.ReadEvent(ctx, "")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "topic is required")
+		assert.Nil(t, event)
+	})
+
+	t.Run("uses provided group ID", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				GroupID: "default-group",
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// This will fail when trying to read from non-existent Kafka, but validation should pass
+		_, err := consumer.ReadEvent(ctx, "test-topic", "override-group")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("uses config group ID when none provided", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+				GroupID: "config-group",
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+		ctx := context.Background()
+
+		// This will fail when trying to read from non-existent Kafka, but validation should pass
+		_, err := consumer.ReadEvent(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("context with deadline validation", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create context with deadline
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		// This will fail when trying to read from non-existent Kafka, but validation should pass
+		_, err := consumer.ReadEvent(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+
+	t.Run("context without deadline gets timeout", func(t *testing.T) {
+		consumer := &Consumer{
+			config: Config{
+				Brokers: []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{
+					Username: "testuser",
+					Password: "testpass",
+				},
+			},
+			readers: make(map[string]*kafka.Reader),
+		}
+
+		// Create context without deadline
+		ctx := context.Background()
+
+		// This will fail when trying to read from non-existent Kafka, but should apply default timeout
+		_, err := consumer.ReadEvent(ctx, "test-topic")
+		assert.Error(t, err)
+		// Should get to the read attempt, not validation error
+		assert.NotContains(t, err.Error(), "consumer not initialized")
+		assert.NotContains(t, err.Error(), "topic is required")
+	})
+}
+
+// TestReadEventWithMessage tests the ReadEventWithMessage function that has 0% coverage
+func TestReadEventWithMessageBackup(t *testing.T) {
 	tests := []struct {
 		name        string
 		consumer    *Consumer
