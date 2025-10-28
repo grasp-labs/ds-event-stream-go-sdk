@@ -103,6 +103,89 @@ func TestNewConsumerSuccess(t *testing.T) {
 	}
 }
 
+func TestNewConsumerNoBrokers(t *testing.T) {
+	cfg := Config{
+		Brokers: []string{}, // Empty brokers should fail
+		ClientCredentials: ClientCredentials{
+			Username: "testuser",
+			Password: "testpass",
+		},
+		GroupID: "test-group",
+	}
+
+	consumer, err := NewConsumer(cfg)
+	assert.Error(t, err)
+	assert.Nil(t, consumer)
+	assert.Contains(t, err.Error(), "no brokers provided")
+}
+
+func TestNewConsumerSASLSetup(t *testing.T) {
+	cfg := Config{
+		Brokers: []string{"localhost:9092", "localhost:9093"},
+		ClientCredentials: ClientCredentials{
+			Username: "testuser",
+			Password: "testpass",
+		},
+		GroupID: "test-group",
+	}
+
+	// This test ensures SASL mechanism setup code path is covered
+	consumer, err := NewConsumer(cfg)
+
+	// Should succeed in setting up SASL mechanism
+	assert.NoError(t, err)
+	assert.NotNil(t, consumer)
+	assert.NotNil(t, consumer.client)
+	assert.NotNil(t, consumer.readers)
+	assert.Equal(t, cfg.GroupID, consumer.config.GroupID)
+
+	if consumer != nil {
+		consumer.Close()
+	}
+}
+
+func TestNewConsumerWithConfiguration(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  Config
+	}{
+		{
+			name: "config_with_partition_strategy",
+			cfg: Config{
+				Brokers:           []string{"localhost:9092"},
+				ClientCredentials: ClientCredentials{Username: "user", Password: "pass"},
+				GroupID:           "test-partition-group",
+				Partition:         5,
+				MinBytes:          1024,
+				MaxBytes:          2048,
+			},
+		},
+		{
+			name: "config_with_balancer_and_multiple_brokers",
+			cfg: Config{
+				Brokers:           []string{"broker1:9092", "broker2:9092", "broker3:9092"},
+				ClientCredentials: ClientCredentials{Username: "multi-user", Password: "multi-pass"},
+				GroupID:           "multi-broker-group",
+				MaxWait:           time.Second * 5,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			consumer, err := NewConsumer(tt.cfg)
+			assert.NoError(t, err)
+			assert.NotNil(t, consumer)
+			assert.Equal(t, tt.cfg.GroupID, consumer.config.GroupID)
+			assert.Equal(t, tt.cfg.Brokers, consumer.config.Brokers)
+
+			if consumer != nil {
+				consumer.Close()
+			}
+		})
+	}
+}
+
 func TestConsumerClose(t *testing.T) {
 	clientCredentials := ClientCredentials{
 		Username: "test_user",
@@ -185,6 +268,50 @@ func TestConsumerStatsNil(t *testing.T) {
 	_, err := consumer.Stats("test-topic")
 	if err == nil || err.Error() != "kafka: consumer not initialized" {
 		t.Errorf("Expected 'consumer not initialized' error, got %v", err)
+	}
+}
+
+func TestConsumerStatsValidation(t *testing.T) {
+	security := ClientCredentials{
+		Username: "test_user",
+		Password: "test_pass",
+	}
+	bootstrapServers := GetBootstrapServers(Dev, false)
+	groupID := "test-group"
+
+	config := DefaultConsumerConfig(security, bootstrapServers, groupID)
+	consumer, err := NewConsumer(config)
+	assert.NoError(t, err)
+	defer consumer.Close()
+
+	tests := []struct {
+		name        string
+		topic       string
+		expectedErr string
+	}{
+		{
+			name:        "empty_topic",
+			topic:       "",
+			expectedErr: "kafka: topic is required",
+		},
+		{
+			name:        "non_existent_topic",
+			topic:       "non-existent-topic",
+			expectedErr: "kafka: no active reader for topic non-existent-topic",
+		},
+		{
+			name:        "another_missing_topic",
+			topic:       "missing-topic-name",
+			expectedErr: "kafka: no active reader for topic missing-topic-name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := consumer.Stats(tt.topic)
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedErr, err.Error())
+		})
 	}
 }
 
