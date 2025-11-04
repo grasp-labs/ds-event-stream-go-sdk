@@ -1810,7 +1810,6 @@ func TestReadEventContextEdgeCases(t *testing.T) {
 	})
 }
 
-
 // TestCommitEvent tests the new CommitEvent function that commits a single message
 func TestCommitEvent(t *testing.T) {
 	t.Run("nil consumer", func(t *testing.T) {
