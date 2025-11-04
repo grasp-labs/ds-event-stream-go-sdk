@@ -15,7 +15,6 @@ import (
 // Consumer wraps a kafka-go Reader for reading model messages from topics.
 type Consumer struct {
 	config  Config
-	client  *kafka.Client
 	readers map[string]*kafka.Reader // topic -> reader mapping
 }
 
@@ -93,23 +92,8 @@ func NewConsumer(cfg Config) (*Consumer, error) {
 		return nil, errors.New("kafka: no brokers provided")
 	}
 
-	transport := &kafka.Transport{}
-	mech, mecherr := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
-	if mecherr != nil {
-		log.Println("kafka: error setting up SASL mechanism:", mecherr)
-		return nil, mecherr
-	}
-	transport.SASL = mech
-
-	// Create client for ACL checks
-	client := &kafka.Client{
-		Addr:      kafka.TCP(cfg.Brokers...),
-		Transport: transport,
-	}
-
 	return &Consumer{
 		config:  cfg,
-		client:  client,
 		readers: make(map[string]*kafka.Reader),
 	}, nil
 }

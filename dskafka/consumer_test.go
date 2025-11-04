@@ -90,7 +90,6 @@ func TestNewConsumerSuccess(t *testing.T) {
 	}
 
 	assert.NotNil(t, consumer.readers, "Expected non-nil readers map")
-	assert.NotNil(t, consumer.client, "Expected non-nil client")
 
 	// Test Close
 	err = consumer.Close()
@@ -131,9 +130,7 @@ func TestNewConsumerSASLSetup(t *testing.T) {
 	// Should succeed in setting up SASL mechanism
 	assert.NoError(t, err)
 	if assert.NotNil(t, consumer) {
-		assert.NotNil(t, consumer.client)
 		assert.NotNil(t, consumer.readers)
-		assert.Equal(t, cfg.GroupID, consumer.config.GroupID)
 
 		err := consumer.Close()
 		assert.NoError(t, err)
@@ -457,7 +454,6 @@ func TestReadEventScenarios(t *testing.T) {
 			name: "consumer with nil readers",
 			consumer: &Consumer{
 				readers: nil,
-				client:  nil,
 				config: Config{
 					Brokers: []string{}, // Empty brokers should cause error before panic
 				},
@@ -470,7 +466,6 @@ func TestReadEventScenarios(t *testing.T) {
 			name: "empty topic",
 			consumer: &Consumer{
 				readers: make(map[string]*kafka.Reader),
-				client:  nil,
 			},
 			topic:       "",
 			expectError: true,
@@ -512,7 +507,6 @@ func TestConsumerStatsScenarios(t *testing.T) {
 			name: "valid consumer no active reader",
 			consumer: &Consumer{
 				readers: make(map[string]*kafka.Reader),
-				client:  nil,
 			},
 			topic:       "non-existent-topic",
 			expectError: true,
@@ -1605,7 +1599,6 @@ func TestNewConsumerAdvanced(t *testing.T) {
 			// If it succeeds, should have valid consumer
 			assert.NotNil(t, consumer)
 			assert.NotNil(t, consumer.readers)
-			assert.NotNil(t, consumer.client)
 		}
 	})
 
@@ -1625,7 +1618,6 @@ func TestNewConsumerAdvanced(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, consumer)
 		assert.NotNil(t, consumer.readers)
-		assert.NotNil(t, consumer.client)
 		assert.Equal(t, cfg.Brokers, consumer.config.Brokers)
 		assert.Equal(t, cfg.GroupID, consumer.config.GroupID)
 	})
@@ -1697,8 +1689,6 @@ func TestNewConsumerEdgeCases(t *testing.T) {
 		consumer, err := NewConsumer(cfg)
 		assert.NoError(t, err)
 		assert.NotNil(t, consumer)
-		assert.NotNil(t, consumer.client)
-		assert.NotNil(t, consumer.client.Transport)
 	})
 }
 
