@@ -47,17 +47,12 @@ func TestNewProducerSuccess(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	if producer == nil {
-		t.Fatal("Expected producer to be created")
+	if !assert.NotNil(t, producer, "Expected producer to be created") {
+		return
 	}
 
-	if producer.w == nil {
-		t.Error("Expected writer to be initialized")
-	}
-
-	if producer.client == nil {
-		t.Error("Expected client to be initialized")
-	}
+	assert.NotNil(t, producer.w, "Expected writer to be initialized")
+	assert.NotNil(t, producer.client, "Expected client to be initialized")
 
 	// Clean up
 	err = producer.Close()
@@ -100,7 +95,8 @@ func TestNewProducerSASLSetup(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
 	if producer != nil {
-		producer.Close()
+		err := producer.Close()
+		assert.NoError(t, err)
 	}
 } // TestNewProducerWithCustomConfig tests NewProducer with various configuration options
 func TestNewProducerWithCustomConfig(t *testing.T) {
@@ -578,25 +574,5 @@ func BenchmarkSendEvent(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = producer.SendEvent(ctx, "test-topic", event)
-	}
-}
-
-// Test helper to create various event types
-func createEventWithCustomFields(eventType string, source string) models.EventJson {
-	return models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   eventType,
-		EventSource: source,
-		Metadata:    map[string]string{"env": "test"},
-		Timestamp:   time.Now(),
-		CreatedBy:   "test-producer",
-		Md5Hash:     "test-hash",
-		Payload: &map[string]interface{}{
-			"action": "test",
-			"count":  1,
-		},
 	}
 }

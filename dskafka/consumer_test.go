@@ -85,17 +85,12 @@ func TestNewConsumerSuccess(t *testing.T) {
 		t.Fatalf("Expected successful consumer creation, got error: %v", err)
 	}
 
-	if consumer == nil {
-		t.Fatal("Expected non-nil consumer")
+	if !assert.NotNil(t, consumer, "Expected non-nil consumer") {
+		return
 	}
 
-	if consumer.readers == nil {
-		t.Error("Expected non-nil readers map")
-	}
-
-	if consumer.client == nil {
-		t.Error("Expected non-nil client")
-	}
+	assert.NotNil(t, consumer.readers, "Expected non-nil readers map")
+	assert.NotNil(t, consumer.client, "Expected non-nil client")
 
 	// Test Close
 	err = consumer.Close()
@@ -135,13 +130,13 @@ func TestNewConsumerSASLSetup(t *testing.T) {
 
 	// Should succeed in setting up SASL mechanism
 	assert.NoError(t, err)
-	assert.NotNil(t, consumer)
-	assert.NotNil(t, consumer.client)
-	assert.NotNil(t, consumer.readers)
-	assert.Equal(t, cfg.GroupID, consumer.config.GroupID)
+	if assert.NotNil(t, consumer) {
+		assert.NotNil(t, consumer.client)
+		assert.NotNil(t, consumer.readers)
+		assert.Equal(t, cfg.GroupID, consumer.config.GroupID)
 
-	if consumer != nil {
-		consumer.Close()
+		err := consumer.Close()
+		assert.NoError(t, err)
 	}
 }
 
@@ -176,12 +171,10 @@ func TestNewConsumerWithConfiguration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			consumer, err := NewConsumer(tt.cfg)
 			assert.NoError(t, err)
-			assert.NotNil(t, consumer)
-			assert.Equal(t, tt.cfg.GroupID, consumer.config.GroupID)
-			assert.Equal(t, tt.cfg.Brokers, consumer.config.Brokers)
-
-			if consumer != nil {
-				consumer.Close()
+			if assert.NotNil(t, consumer) {
+				assert.Equal(t, tt.cfg.GroupID, consumer.config.GroupID)
+				assert.Equal(t, tt.cfg.Brokers, consumer.config.Brokers)
+				_ = consumer.Close()
 			}
 		})
 	}
@@ -283,7 +276,7 @@ func TestConsumerStatsValidation(t *testing.T) {
 	config := DefaultConsumerConfig(security, bootstrapServers, groupID)
 	consumer, err := NewConsumer(config)
 	assert.NoError(t, err)
-	defer consumer.Close()
+	defer func() { _ = consumer.Close() }()
 
 	tests := []struct {
 		name        string
@@ -853,7 +846,7 @@ func TestGetOrCreateReader(t *testing.T) {
 
 		// kafka-go doesn't allow empty topic names, this should panic/error
 		assert.Panics(t, func() {
-			consumer.getOrCreateReader("", "")
+			_, _ = consumer.getOrCreateReader("", "")
 		})
 	})
 
