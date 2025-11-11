@@ -41,6 +41,7 @@ go run main.go -username=your-username -password=your-kafka-password
 | `-topic` | string | `ds.workflow.pipeline.job.requested.v1` | Kafka topic to consume from |
 | `-timeout` | duration | `30s` | Total timeout for finding a message |
 | `-max-attempts` | int | `10` | Maximum number of read attempts |
+| `-from-end` | bool | `false` | Start consuming from the end of the topic (skip existing messages) |
 
 ### Examples
 
