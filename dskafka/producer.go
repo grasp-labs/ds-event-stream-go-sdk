@@ -222,3 +222,35 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 	}
 	return nil
 }
+
+// SafeSendEvent is a wrapper around SendEvent that logs errors instead of returning them.
+// This function is useful in scenarios where you want to send events in a fire-and-forget manner
+// without having to handle errors explicitly. Any errors encountered during sending will be logged
+// but will not interrupt the execution flow.
+//
+// Use this function when:
+//   - You want best-effort delivery without error handling complexity
+//   - The application should continue running even if some events fail to send
+//   - You're okay with potentially losing some events in exchange for simpler code
+//
+// Parameters:
+//   - ctx: Context for cancellation and timeout control
+//   - topic: Target Kafka topic name
+//   - evt: Event to send (must be valid EventJson with required fields)
+//   - headers: Optional custom headers to add to the message
+//
+// Note: This function logs all errors using the standard log package.
+// Consider using SendEvent directly if you need to handle errors programmatically.
+//
+// Example:
+//
+//	// Fire and forget - errors are logged but not returned
+//	producer.SafeSendEvent(ctx, "user-events", event,
+//	    Header{Key: "source", Value: "user-service"})
+func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) {
+	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
+		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
+		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
+			evt.Id.String(), evt.EventType, evt.EventSource)
+	}
+}

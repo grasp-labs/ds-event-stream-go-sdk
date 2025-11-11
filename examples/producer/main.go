@@ -134,5 +134,12 @@ func main() {
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
 	}
+
+	log.Println("Testing SafeSendEvent (fire-and-forget)")
+	// Test SafeSendEvent - errors are logged but execution continues
+	event.Id = uuid.New() // new ID for the safe send test
+	producer.SafeSendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", event)
+	log.Println("SafeSendEvent completed - any errors were logged automatically")
+
 	log.Println("Done")
 }
