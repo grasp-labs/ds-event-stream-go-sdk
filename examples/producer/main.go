@@ -18,6 +18,7 @@ func main() {
 	log.Println("Fetching credentials from command line arguments")
 	username := flag.String("username", "ds.consumption.ingress.v1", "Kafka username")
 	password := flag.String("password", "", "Kafka password")
+	topic := flag.String("topic", "ds.test.message.created.v1", "Topic to produce to")
 	flag.Parse()
 
 	if *password == "" {
@@ -69,7 +70,7 @@ func main() {
 
 	log.Println("Sending event")
 	// Send single event
-	err = producer.SendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", event)
+	err = producer.SendEvent(context.Background(), *topic, event)
 	if err != nil {
 		log.Printf("Failed to send event: %v", err)
 	}
@@ -81,7 +82,7 @@ func main() {
 		{Key: "version", Value: "1.0"},
 	}
 	event.Id = uuid.New() // new ID for the new event
-	err = producer.SendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", event, headers...)
+	err = producer.SendEvent(context.Background(), *topic, event, headers...)
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
 	}
