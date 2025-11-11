@@ -21,7 +21,7 @@ func main() {
 	password := flag.String("password", "", "Kafka password (required)")
 	groupID := flag.String("group", "example-consumer-group", "Consumer group ID")
 	topic := flag.String("topic", "ds.workflow.pipeline.job.requested.v1", "Topic to consume from")
-	fromEnd := flag.Bool("from-end", false, "Start reading from the end (latest) instead of beginning")
+	fromEnd := flag.Bool("from-end", false, "Start reading from the end (latest) for new consumer groups without committed offsets")
 	timeout := flag.Duration("timeout", 30*time.Second, "Total timeout for finding a message")
 	maxAttempts := flag.Int("max-attempts", 10, "Maximum number of read attempts")
 	flag.Parse()
