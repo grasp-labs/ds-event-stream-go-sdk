@@ -203,7 +203,7 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 
 	// Only set offset manually when NOT using consumer groups
 	// Consumer groups manage their own offsets automatically
-	if groupID == "" {
+	if groupID == "" && c.config.Partition < 0 {
 		// Set manual offset for non-group consumers based on configuration
 		if err := reader.SetOffset(c.config.StartOffset); err != nil {
 			log.Println("kafka: error setting offset:", err)
