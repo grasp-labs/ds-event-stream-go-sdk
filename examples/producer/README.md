@@ -17,33 +17,50 @@ This example demonstrates how to use the DS Event Stream Go SDK to produce event
 
 ### Quick Start
 
-Run directly with Go:
+**Option 1: Using AWS SSM Parameter Store (Recommended)**
+```bash
+go run main.go -use-ssm
+```
 
+**Option 2: Using command line password**
 ```bash
 go run main.go -password=your-kafka-password
 ```
 
-Or with custom username:
-
+**Option 3: With custom username and SSM**
 ```bash
-go run main.go -username=your-username -password=your-kafka-password
+go run main.go -username=your-username -use-ssm
 ```
 
 ### Command Line Options
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-username` | string | `ds.consumption.ingress.v1` | Kafka SASL username |
-| `-password` | string | - | Kafka SASL password (required) |
+| `-username` | string | `ds.test.producer.v1` | Kafka SASL username |
+| `-password` | string | - | Kafka SASL password (optional if using SSM) |
+| `-use-ssm` | bool | `false` | Get password from AWS SSM Parameter Store |
+| `-topic` | string | `ds.test.message.created.v1` | Topic to produce to |
 
 ### Examples
 
-1. **Basic usage with required password**:
+1. **Using AWS SSM Parameter Store (Recommended)**:
+```bash
+go run main.go -use-ssm
+```
+This will automatically fetch the password from `/ds/kafka/dev/principals/ds.test.producer.v1`
+
+2. **Using command line password**:
 ```bash
 go run main.go -password=supersecret
 ```
 
-2. **Custom username and password**:
+3. **Custom username with SSM**:
+```bash
+go run main.go -username=my.custom.producer.v1 -use-ssm
+```
+This will fetch the password from `/ds/kafka/dev/principals/my.custom.producer.v1`
+
+4. **Custom username and password**:
 ```bash
 go run main.go -username=myuser -password=supersecret
 ```
@@ -108,18 +125,44 @@ err = producer.SendEvent(context.Background(), "topic-name", event, headers...)
 
 ## Configuration
 
+### Kafka Configuration
 The example uses:
-- **Username**: `ds.consumption.ingress.v1` (default, can be overridden with `-username`)
+- **Username**: `ds.test.producer.v1` (default, can be overridden with `-username`)
 - **Environment**: Development environment with internal bootstrap servers
 - **Authentication**: SASL SCRAM-SHA-512
-- **Target Topic**: `ds.workflow.pipeline.job.requested.v1`
+- **Target Topic**: `ds.test.message.created.v1` (can be overridden with `-topic`)
+
+### AWS SSM Configuration
+When using `-use-ssm`, the application:
+- **Parameter Path**: `/ds/kafka/dev/principals/{username}` (e.g., `/ds/kafka/dev/principals/ds.test.producer.v1`)
+- **Authentication**: Uses AWS SDK default credential chain (IAM role, profile, environment variables)
+- **Permissions Required**: `ssm:GetParameter` on the specified parameter path
+- **Parameter Type**: Supports both `String` and `SecureString` parameter types
 
 ## Dependencies
 
+This example has its own `go.mod` file with the following dependencies:
 - Go 1.23+
-- github.com/grasp-labs/ds-event-stream-go-sdk
+- github.com/grasp-labs/ds-event-stream-go-sdk (via replace directive to main module)
 - github.com/google/uuid
+- github.com/aws/aws-sdk-go-v2/config (for SSM functionality)
+- github.com/aws/aws-sdk-go-v2/service/ssm (for SSM functionality)
 - Access to Kafka cluster with proper credentials
+- AWS credentials configured (when using `-use-ssm`)
+
+The AWS SDK dependencies are isolated to this example and do not affect the main SDK module.
+
+## Module Structure
+
+This example uses its own Go module (`producer-example`) with a replace directive that points to the main SDK:
+
+```go.mod
+module producer-example
+
+replace github.com/grasp-labs/ds-event-stream-go-sdk => ../..
+```
+
+This allows the example to have AWS dependencies while keeping the main SDK clean and focused.
 
 ## Code Walkthrough
 
@@ -161,8 +204,12 @@ err = producer.SendEvent(context.Background(), "topic-name", event, headers...)
 
 ### Common Issues
 
-1. **"Password is required"**: Use the `-password` flag
-2. **EOF Error**: Kafka brokers are not accessible
+1. **"Password is required"**: Use the `-password` flag or `-use-ssm=true`
+2. **AWS SSM Errors**: 
+   - **"NoCredentialProviders"**: Configure AWS credentials using AWS CLI, environment variables, or IAM role
+   - **"ParameterNotFound"**: Verify the SSM parameter exists at the expected path
+   - **"AccessDenied"**: Ensure your AWS credentials have `ssm:GetParameter` permissions
+3. **EOF Error**: Kafka brokers are not accessible
    ```
    Failed to create producer: error dialing all brokers, one of the errors: EOF
    ```

@@ -6,24 +6,78 @@ import (
 	"log"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
 	"github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 )
 
-// pass password as argument
+// getPasswordFromSSM retrieves a password from AWS Systems Manager Parameter Store
+func getPasswordFromSSM(ctx context.Context, parameterName string) (string, error) {
+	// Load the AWS configuration
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Create SSM client
+	ssmClient := ssm.NewFromConfig(cfg)
+
+	// Get the parameter with decryption enabled
+	input := &ssm.GetParameterInput{
+		Name:           &parameterName,
+		WithDecryption: &[]bool{true}[0], // Enable decryption for SecureString parameters
+	}
+
+	result, err := ssmClient.GetParameter(ctx, input)
+	if err != nil {
+		return "", err
+	}
+
+	return *result.Parameter.Value, nil
+}
+
+// pass password as argument or get from SSM
 // go run main.go -password=supersecret
+// go run main.go -use-ssm (gets password from SSM)
 func main() {
-	// Get password from command line arguments
-	log.Println("Fetching password from command line arguments")
-	password := flag.String("password", "", "Kafka password")
+	// Get configuration from command line arguments
+	username := flag.String("username", "ds.test.producer.v1", "Kafka username")
+	password := flag.String("password", "", "Kafka password (optional if using SSM)")
+	useSSM := flag.Bool("use-ssm", false, "Get password from AWS SSM Parameter Store")
+	topic := flag.String("topic", "ds.test.message.created.v1", "Topic to produce to")
 	flag.Parse()
+
+	var actualPassword string
+	var err error
+
+	if *useSSM {
+		log.Println("Fetching password from AWS SSM Parameter Store")
+		// Construct SSM parameter name based on username
+		parameterName := "/ds/kafka/dev/principals/" + *username
+		log.Printf("Getting password from SSM parameter: %s", parameterName)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		actualPassword, err = getPasswordFromSSM(ctx, parameterName)
+		if err != nil {
+			log.Fatalf("Failed to get password from SSM: %v", err)
+		}
+		log.Println("Successfully retrieved password from SSM")
+	} else if *password != "" {
+		log.Println("Using password from command line argument")
+		actualPassword = *password
+	} else {
+		log.Fatal("Password is required. Use -password=your-kafka-password or -use-ssm=true")
+	}
 
 	log.Println("Setting up credentials")
 	// Setup credentials
 	credentials := dskafka.ClientCredentials{
-		Username: "ds.consumption.ingress.v1",
-		Password: *password,
+		Username: *username,
+		Password: actualPassword,
 	}
 
 	log.Println("Getting bootstrap servers")
@@ -64,7 +118,7 @@ func main() {
 
 	log.Println("Sending event")
 	// Send single event
-	err = producer.SendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", event)
+	err = producer.SendEvent(context.Background(), *topic, event)
 	if err != nil {
 		log.Printf("Failed to send event: %v", err)
 	}
@@ -76,7 +130,7 @@ func main() {
 		{Key: "version", Value: "1.0"},
 	}
 	event.Id = uuid.New() // new ID for the new event
-	err = producer.SendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", event, headers...)
+	err = producer.SendEvent(context.Background(), *topic, event, headers...)
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
 	}
