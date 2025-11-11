@@ -15,7 +15,7 @@ import (
 // Consumer wraps a kafka-go Reader for reading model messages from topics.
 type Consumer struct {
 	config  Config
-	readers map[string]*kafka.Reader // topic -> reader mapping
+	readers map[string]*kafka.Reader // map key is topic or groupID:topic for readers with consumer groups
 }
 
 // DefaultConsumerConfig creates a Config with sensible production defaults for Kafka consumers.
