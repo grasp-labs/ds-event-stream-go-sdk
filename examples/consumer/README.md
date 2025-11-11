@@ -19,24 +19,28 @@ This example demonstrates how to use the DS Event Stream Go SDK to consume event
 
 ### Quick Start
 
-Run directly with Go:
+**Option 1: Using AWS SSM Parameter Store (Recommended)**
+```bash
+go run main.go -use-ssm
+```
 
+**Option 2: Using command line password**
 ```bash
 go run main.go -password=your-kafka-password
 ```
 
-Or with custom username:
-
+**Option 3: With custom username and SSM**
 ```bash
-go run main.go -username=your-username -password=your-kafka-password
+go run main.go -username=your-username -use-ssm
 ```
 
 ### Command Line Options
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `-username` | string | `ds.consumption.ingress.v1` | Kafka SASL username |
-| `-password` | string | - | Kafka SASL password (required) |
+| `-username` | string | `ds.test.consumer.v1` | Kafka SASL username |
+| `-password` | string | - | Kafka SASL password (optional if using SSM) |
+| `-use-ssm` | bool | `false` | Get password from AWS SSM Parameter Store |
 | `-group` | string | `example-consumer-group` | Consumer group ID |
 | `-topic` | string | `ds.workflow.pipeline.job.requested.v1` | Kafka topic to consume from |
 | `-timeout` | duration | `30s` | Total timeout for finding a message |
@@ -45,7 +49,13 @@ go run main.go -username=your-username -password=your-kafka-password
 
 ### Examples
 
-1. **Basic usage with required password**:
+1. **Using AWS SSM Parameter Store (Recommended)**:
+```bash
+go run main.go -use-ssm
+```
+This will automatically fetch the password from `/ds/kafka/dev/principals/ds.test.consumer.v1`
+
+2. **Basic usage with command line password**:
 ```bash
 go run main.go -password=supersecret
 ```
@@ -117,9 +127,28 @@ The example uses:
 
 ## Dependencies
 
+This example has its own `go.mod` file with the following dependencies:
 - Go 1.23+
-- github.com/grasp-labs/ds-event-stream-go-sdk
+- github.com/grasp-labs/ds-event-stream-go-sdk (via replace directive to main module)
+- github.com/segmentio/kafka-go (for additional Kafka types)
+- github.com/aws/aws-sdk-go-v2/config (for SSM functionality)
+- github.com/aws/aws-sdk-go-v2/service/ssm (for SSM functionality)
 - Access to Kafka cluster with proper credentials
+- AWS credentials configured (when using `-use-ssm`)
+
+The AWS SDK dependencies are isolated to this example and do not affect the main SDK module.
+
+## Module Structure
+
+This example uses its own Go module (`consumer-example`) with a replace directive that points to the main SDK:
+
+```go.mod
+module consumer-example
+
+replace github.com/grasp-labs/ds-event-stream-go-sdk => ../..
+```
+
+This allows the example to have AWS dependencies while keeping the main SDK clean and focused.
 
 ## Troubleshooting
 

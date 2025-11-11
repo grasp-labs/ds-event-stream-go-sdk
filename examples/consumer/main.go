@@ -7,18 +7,47 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
 	"github.com/segmentio/kafka-go"
 )
 
+// getPasswordFromSSM retrieves a password from AWS Systems Manager Parameter Store
+func getPasswordFromSSM(ctx context.Context, parameterName string) (string, error) {
+	// Load the AWS configuration
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	// Create SSM client
+	ssmClient := ssm.NewFromConfig(cfg)
+
+	// Get the parameter with decryption enabled
+	input := &ssm.GetParameterInput{
+		Name:           &parameterName,
+		WithDecryption: &[]bool{true}[0], // Enable decryption for SecureString parameters
+	}
+
+	result, err := ssmClient.GetParameter(ctx, input)
+	if err != nil {
+		return "", err
+	}
+
+	return *result.Parameter.Value, nil
+}
+
 // Simple consumer example that loops until it finds at least one message
 // Usage: go run main.go -password=supersecret
 // Usage: go run main.go -username=myuser -password=supersecret
+// Usage: go run main.go -use-ssm (gets password from SSM)
 func main() {
 	// Command line arguments
-	username := flag.String("username", "ds.consumption.ingress.v1", "Kafka username")
-	password := flag.String("password", "", "Kafka password (required)")
+	username := flag.String("username", "ds.test.consumer.v1", "Kafka username")
+	password := flag.String("password", "", "Kafka password (optional if using SSM)")
+	useSSM := flag.Bool("use-ssm", false, "Get password from AWS SSM Parameter Store")
 	groupID := flag.String("group", "example-consumer-group", "Consumer group ID")
 	topic := flag.String("topic", "ds.workflow.pipeline.job.requested.v1", "Topic to consume from")
 	fromEnd := flag.Bool("from-end", false, "Start reading from the end (latest) for new consumer groups without committed offsets")
@@ -26,8 +55,28 @@ func main() {
 	maxAttempts := flag.Int("max-attempts", 10, "Maximum number of read attempts")
 	flag.Parse()
 
-	if *password == "" {
-		log.Fatal("Password is required. Use -password=your-kafka-password")
+	var actualPassword string
+	var err error
+
+	if *useSSM {
+		log.Println("Fetching password from AWS SSM Parameter Store")
+		// Construct SSM parameter name based on username
+		parameterName := "/ds/kafka/dev/principals/" + *username
+		log.Printf("Getting password from SSM parameter: %s", parameterName)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		actualPassword, err = getPasswordFromSSM(ctx, parameterName)
+		if err != nil {
+			log.Fatalf("Failed to get password from SSM: %v", err)
+		}
+		log.Println("Successfully retrieved password from SSM")
+	} else if *password != "" {
+		log.Println("Using password from command line argument")
+		actualPassword = *password
+	} else {
+		log.Fatal("Password is required. Use -password=your-kafka-password or -use-ssm=true")
 	}
 
 	log.Printf("Starting simple consumer example...")
@@ -38,7 +87,7 @@ func main() {
 	// Setup credentials
 	credentials := dskafka.ClientCredentials{
 		Username: *username,
-		Password: *password,
+		Password: actualPassword,
 	}
 
 	// Get bootstrap servers for dev environment
