@@ -21,17 +21,17 @@ help:
 # Test targets
 test:
 	@echo "Running tests..."
-	go test ./...
+	go test ./dskafka ./models
 
 test-verbose:
 	@echo "Running tests with verbose output..."
-	go test -v ./...
+	go test -v ./dskafka ./models
 
 test-coverage:
 	@echo "Running tests with coverage..."
-	go test -v -cover ./...
+	go test -v -cover ./dskafka ./models
 	@echo "Generating coverage report..."
-	go test -coverprofile=coverage.out ./...
+	go test -coverprofile=coverage.out ./dskafka ./models
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
@@ -42,7 +42,7 @@ integration-test:
 		echo "Please set it with: export DS_CONSUMPTION_INGRESS_V1_PASSWORD=your_password"; \
 		exit 1; \
 	fi
-	go test -tags=integration ./...
+	go test -tags=integration ./dskafka ./models
 
 # Build targets
 build:
@@ -92,11 +92,11 @@ install-tools:
 generate-types:
 	@echo "Generating Go types from JSON schemas..."
 	@echo "Converting system-topics.json to Go types..."
-	@go-jsonschema --package kafka --output kafka/system_topics.go schemas/system-topics.json
+	@go-jsonschema --package dskafka --output dskafka/system_topics.go schemas/system-topics.json
 	@echo "Converting event.json to Go types..."
 	@go-jsonschema --package models --output models/event.go schemas/event.json
 	@echo "Go types generated successfully:"
-	@echo "  - kafka/system_topics.go (from schemas/system-topics.json)"
+	@echo "  - dskafka/system_topics.go (from schemas/system-topics.json)"
 	@echo "  - models/event.go (from schemas/event.json)"
 	@echo ""
 	@echo "NOTE: After generation, manually update models/event.go to use uuid.UUID types:"

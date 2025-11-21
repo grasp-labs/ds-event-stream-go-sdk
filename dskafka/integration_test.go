@@ -1,5 +1,4 @@
 //go:build integration
-// +build integration
 
 package dskafka
 
@@ -55,7 +54,7 @@ func TestIntegrationSendEvent(t *testing.T) {
 		Timestamp:   time.Now(),
 		CreatedBy:   "integration-test",
 		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-		Payload: &map[string]interface{}{
+		Payload: map[string]interface{}{
 			"test_message": "integration test",
 			"timestamp":    time.Now().Unix(),
 		},
@@ -118,7 +117,7 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 		Timestamp:   time.Now(),
 		CreatedBy:   "benchmark-test",
 		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-		Payload: &map[string]interface{}{
+		Payload: map[string]interface{}{
 			"benchmark": true,
 		},
 	}

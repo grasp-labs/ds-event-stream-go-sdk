@@ -51,11 +51,9 @@ components:
           nullable: true
           description: Optional human-readable message.
         payload:
-          type: object
           nullable: true
-          additionalProperties: true
           description: >
-            JSON body of the event (arbitrary key/value map).
+            JSON body of the event (can be object, array, or any valid JSON).
         payload_uri:
           type: string
           format: uri
@@ -84,11 +82,9 @@ components:
           description: MD5 hash of the canonical event representation.
           pattern: '^[A-Fa-f0-9]{32}$'
         context:
-          type: object
           nullable: true
-          additionalProperties: true
           description: >
-            Processing context for consumers (arbitrary key/value map).
+            Processing context for consumers (can be object, array, or any valid JSON).
         context_uri:
           type: string
           format: uri

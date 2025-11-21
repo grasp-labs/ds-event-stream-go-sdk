@@ -16,8 +16,8 @@ type EventJson struct {
 	// Optional URI of the affected entity.
 	AffectedEntityUri *string `json:"affected_entity_uri,omitempty" yaml:"affected_entity_uri,omitempty" mapstructure:"affected_entity_uri,omitempty"`
 
-	// Processing context for consumers (arbitrary key/value map).
-	Context *map[string]interface{} `json:"context,omitempty" yaml:"context,omitempty" mapstructure:"context,omitempty"`
+	// Processing context for consumers (can be object, array, or any valid JSON).
+	Context interface{} `json:"context,omitempty" yaml:"context,omitempty" mapstructure:"context,omitempty"`
 
 	// Optional URI to external context.
 	ContextUri *string `json:"context_uri,omitempty" yaml:"context_uri,omitempty" mapstructure:"context_uri,omitempty"`
@@ -49,8 +49,8 @@ type EventJson struct {
 	// Optional owner id.
 	OwnerId *string `json:"owner_id,omitempty" yaml:"owner_id,omitempty" mapstructure:"owner_id,omitempty"`
 
-	// JSON body of the event (arbitrary key/value map).
-	Payload *map[string]interface{} `json:"payload,omitempty" yaml:"payload,omitempty" mapstructure:"payload,omitempty"`
+	// JSON body of the event (can be object, array, or any valid JSON).
+	Payload interface{} `json:"payload,omitempty" yaml:"payload,omitempty" mapstructure:"payload,omitempty"`
 
 	// Optional URI to an external payload.
 	PayloadUri *string `json:"payload_uri,omitempty" yaml:"payload_uri,omitempty" mapstructure:"payload_uri,omitempty"`
