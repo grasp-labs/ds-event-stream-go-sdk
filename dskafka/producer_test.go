@@ -169,11 +169,11 @@ func TestNewProducerWithCustomConfig(t *testing.T) {
 func TestCreateTestEvent(t *testing.T) {
 	event := createTestEvent()
 
-	if event.Id == "" || event.Id == uuid.Nil.String() {
+	if event.Id == uuid.Nil {
 		t.Error("Expected non-nil event ID")
 	}
 
-	if event.SessionId == "" || event.SessionId == uuid.Nil.String() {
+	if event.SessionId == uuid.Nil {
 		t.Error("Expected non-nil session ID")
 	}
 
@@ -307,8 +307,8 @@ func TestSendEventWithDifferentEvents(t *testing.T) {
 		{
 			name: "event with zero UUID",
 			event: models.EventJson{
-				Id:          uuid.Nil.String(), // Zero UUID
-				SessionId:   uuid.New().String(),
+				Id:          uuid.Nil, // Zero UUID
+				SessionId:   uuid.New(),
 				EventType:   "test.event.v1",
 				EventSource: "test",
 				Timestamp:   time.Now(),
@@ -318,8 +318,8 @@ func TestSendEventWithDifferentEvents(t *testing.T) {
 		{
 			name: "event with both zero UUIDs",
 			event: models.EventJson{
-				Id:          uuid.Nil.String(),
-				SessionId:   uuid.Nil.String(),
+				Id:          uuid.Nil,
+				SessionId:   uuid.Nil,
 				EventType:   "test.event.v1",
 				EventSource: "test",
 				Timestamp:   time.Now(),
@@ -445,10 +445,10 @@ func TestSendEventAdvancedScenarios(t *testing.T) {
 				w: &kafka.Writer{}, // Mock writer that won't actually write
 			},
 			event: models.EventJson{
-				Id:          uuid.Nil.String(), // Zero UUID
-				SessionId:   uuid.New().String(),
-				RequestId:   uuid.New().String(),
-				TenantId:    uuid.New().String(),
+				Id:          uuid.Nil, // Zero UUID
+				SessionId:   uuid.New(),
+				RequestId:   uuid.New(),
+				TenantId:    uuid.New(),
 				EventType:   "test.event.v1",
 				EventSource: "test-service",
 				Metadata:    map[string]string{},
@@ -516,17 +516,17 @@ func TestSendEventJSONMarshalingLogic(t *testing.T) {
 	// Test key selection logic
 	t.Run("key selection with valid ID", func(t *testing.T) {
 		event := createTestEvent()
-		key := event.Id
+		key := event.Id.String()
 		assert.NotEqual(t, "00000000-0000-0000-0000-000000000000", key)
 		assert.NotEmpty(t, key)
 	})
 
 	t.Run("key selection with nil ID uses SessionId", func(t *testing.T) {
 		event := createTestEvent()
-		event.Id = uuid.Nil.String()
+		event.Id = uuid.Nil
 
 		// In SendEvent, if Id is nil UUID, it should use SessionId
-		expectedKey := event.SessionId
+		expectedKey := event.SessionId.String()
 		assert.NotEqual(t, "00000000-0000-0000-0000-000000000000", expectedKey)
 		assert.NotEmpty(t, expectedKey)
 	})
