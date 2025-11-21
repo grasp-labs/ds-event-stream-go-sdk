@@ -188,8 +188,10 @@ func TestCreateTestEvent(t *testing.T) {
 	if event.Payload == nil {
 		t.Error("Expected non-nil payload")
 	} else {
-		payload := *event.Payload
-		if len(payload) == 0 {
+		payload, ok := event.Payload.(map[string]interface{})
+		if !ok {
+			t.Error("Expected payload to be a map[string]interface{}")
+		} else if len(payload) == 0 {
 			t.Error("Expected non-empty payload")
 		}
 

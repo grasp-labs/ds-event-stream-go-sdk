@@ -239,6 +239,6 @@ func printEventDetails(event *models.EventJson) {
 	}
 
 	if event.Payload != nil {
-		log.Printf("  📦 Payload: %+v", *event.Payload)
+		log.Printf("  📦 Payload: %+v", event.Payload)
 	}
 }

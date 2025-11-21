@@ -33,7 +33,7 @@ func TestEventSerialization(t *testing.T) {
 		Timestamp:   time.Now(),
 		CreatedBy:   createdBy,
 		Md5Hash:     md5Hash,
-		Payload: &map[string]interface{}{
+		Payload: map[string]interface{}{
 			"key1": "value1",
 			"key2": 42,
 			"key3": true,
@@ -73,16 +73,20 @@ func TestEventSerialization(t *testing.T) {
 		t.Errorf("Expected EventSource %v, got %v", eventSource, unmarshaledEvent.EventSource)
 	}
 
-	// Test payload (now a pointer)
+	// Test payload
 	if unmarshaledEvent.Payload == nil {
 		t.Error("Expected payload to be not nil")
 	} else {
-		payload := *unmarshaledEvent.Payload
-		if len(payload) != 3 {
-			t.Errorf("Expected payload with 3 items, got %d", len(payload))
-		}
-		if payload["key1"] != "value1" {
-			t.Errorf("Expected payload key1 to be 'value1', got %v", payload["key1"])
+		payload, ok := unmarshaledEvent.Payload.(map[string]interface{})
+		if !ok {
+			t.Error("Expected payload to be a map[string]interface{}")
+		} else {
+			if len(payload) != 3 {
+				t.Errorf("Expected payload with 3 items, got %d", len(payload))
+			}
+			if payload["key1"] != "value1" {
+				t.Errorf("Expected payload key1 to be 'value1', got %v", payload["key1"])
+			}
 		}
 	}
 }
@@ -162,7 +166,7 @@ func TestEventJSONFormat(t *testing.T) {
 		Timestamp:   time.Now(),
 		CreatedBy:   createdBy,
 		Md5Hash:     md5Hash,
-		Payload: &map[string]interface{}{
+		Payload: map[string]interface{}{
 			"test": "data",
 		},
 	}
@@ -377,7 +381,7 @@ func TestPayloadHandling(t *testing.T) {
 
 	tests := []struct {
 		name    string
-		payload *map[string]interface{}
+		payload interface{}
 	}{
 		{
 			name:    "nil payload",
@@ -385,11 +389,11 @@ func TestPayloadHandling(t *testing.T) {
 		},
 		{
 			name:    "empty payload",
-			payload: &map[string]interface{}{},
+			payload: map[string]interface{}{},
 		},
 		{
 			name: "simple payload",
-			payload: &map[string]interface{}{
+			payload: map[string]interface{}{
 				"string": "value",
 				"number": 42,
 				"bool":   true,
@@ -397,7 +401,7 @@ func TestPayloadHandling(t *testing.T) {
 		},
 		{
 			name: "nested payload",
-			payload: &map[string]interface{}{
+			payload: map[string]interface{}{
 				"nested": map[string]interface{}{
 					"level2": map[string]interface{}{
 						"level3": "deep_value",
@@ -408,7 +412,7 @@ func TestPayloadHandling(t *testing.T) {
 		},
 		{
 			name: "complex payload",
-			payload: &map[string]interface{}{
+			payload: map[string]interface{}{
 				"uuid":      uuid.New().String(),
 				"timestamp": time.Now().Unix(),
 				"float":     3.14159,

@@ -100,27 +100,57 @@ func main() {
 		}
 	}()
 
-	log.Println("Creating event")
-	// Create an event
-	event := models.EventJson{
+	log.Println("Creating event with object payload")
+	// Create an event with object payload
+	eventWithObject := models.EventJson{
 		Id:          uuid.New(),
 		SessionId:   uuid.New(),
 		RequestId:   uuid.New(),
 		TenantId:    uuid.New(),
-		EventType:   "test.test.v1",
+		EventType:   "test.object.v1",
 		EventSource: "TEST-PRODUCER-GO",
 		CreatedBy:   "system",
 		Md5Hash:     "abcd1234567890abcd1234567890abcd",
 		Metadata:    map[string]string{"version": "1.0"},
 		Timestamp:   time.Now(),
-		Payload:     &map[string]interface{}{"userId": 123, "email": "user@example.com"},
+		Payload:     map[string]interface{}{"userId": 123, "email": "user@example.com"},
 	}
 
-	log.Println("Sending event")
-	// Send single event
-	err = producer.SendEvent(context.Background(), *topic, event)
+	log.Println("Sending event with object payload")
+	err = producer.SendEvent(context.Background(), *topic, eventWithObject)
 	if err != nil {
-		log.Printf("Failed to send event: %v", err)
+		log.Printf("Failed to send event with object payload: %v", err)
+	} else {
+		log.Println("✅ Successfully sent event with object payload")
+	}
+
+	log.Println("Creating event with array payload")
+	// Create an event with array payload
+	eventWithArray := models.EventJson{
+		Id:          uuid.New(),
+		SessionId:   uuid.New(),
+		RequestId:   uuid.New(),
+		TenantId:    uuid.New(),
+		EventType:   "test.array.v1",
+		EventSource: "TEST-PRODUCER-GO",
+		CreatedBy:   "system",
+		Md5Hash:     "abcd1234567890abcd1234567890abcd",
+		Metadata:    map[string]string{"version": "1.0"},
+		Timestamp:   time.Now(),
+		Payload: []interface{}{
+			"item1",
+			"item2",
+			map[string]interface{}{"nested": "value"},
+			42,
+		},
+	}
+
+	log.Println("Sending event with array payload")
+	err = producer.SendEvent(context.Background(), *topic, eventWithArray)
+	if err != nil {
+		log.Printf("Failed to send event with array payload: %v", err)
+	} else {
+		log.Println("✅ Successfully sent event with array payload")
 	}
 
 	log.Println("Sending event with custom headers")
@@ -129,10 +159,13 @@ func main() {
 		{Key: "source", Value: "my-service"},
 		{Key: "version", Value: "1.0"},
 	}
-	event.Id = uuid.New() // new ID for the new event
-	err = producer.SendEvent(context.Background(), *topic, event, headers...)
+	eventWithObject.Id = uuid.New() // new ID for the new event
+	err = producer.SendEvent(context.Background(), *topic, eventWithObject, headers...)
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
+	} else {
+		log.Println("✅ Successfully sent event with custom headers")
 	}
-	log.Println("Done")
+
+	log.Println("Done - sent 3 events total (object, array, and object with headers)")
 }

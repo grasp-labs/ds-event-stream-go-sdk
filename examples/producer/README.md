@@ -83,17 +83,26 @@ Done
 ## How It Works
 
 1. **Setup**: Creates Kafka producer with SASL authentication
-2. **Event Creation**: Generates a structured event with all required fields
-3. **Send Event**: Sends the event to the specified topic
-4. **Send with Headers**: Demonstrates sending with custom headers
-5. **Cleanup**: Properly closes the producer connection
+2. **Event Creation with Object Payload**: Generates an event with a JSON object as payload
+3. **Send Object Event**: Sends the event with object payload to the specified topic
+4. **Event Creation with Array Payload**: Generates an event with a JSON array as payload
+5. **Send Array Event**: Sends the event with array payload to demonstrate flexible payload support
+6. **Send with Headers**: Demonstrates sending events with custom headers
+7. **Cleanup**: Properly closes the producer connection
+
+The example demonstrates that the SDK supports **any valid JSON type** as payload:
+- Objects (maps)
+- Arrays (slices)
+- Strings, numbers, booleans
+- Nested combinations
 
 ## Event Structure
 
-The producer creates events with the following structure:
+The producer creates events with flexible payload types. The `Payload` field accepts any valid JSON type: objects, arrays, strings, numbers, booleans, or null.
 
+### Example 1: Object Payload
 ```go
-event := models.EventJson{
+eventWithObject := models.EventJson{
     Id:          uuid.New(),                    // Unique event ID
     SessionId:   uuid.New(),                    // Session identifier
     RequestId:   uuid.New(),                    // Request identifier  
@@ -104,9 +113,30 @@ event := models.EventJson{
     Md5Hash:     "abcd1234567890abcd1234567890abcd", // Hash
     Metadata:    map[string]string{"version": "1.0"}, // Metadata
     Timestamp:   time.Now(),                    // Current timestamp
-    Payload:     &map[string]interface{}{       // Event payload
+    Payload:     map[string]interface{}{        // Object payload
         "userId": 123, 
         "email": "user@example.com"
+    },
+}
+```
+
+### Example 2: Array Payload
+```go
+eventWithArray := models.EventJson{
+    Id:          uuid.New(),
+    SessionId:   uuid.New(),
+    RequestId:   uuid.New(),
+    TenantId:    uuid.New(),
+    EventType:   "items.updated.v1",
+    EventSource: "inventory-service",
+    CreatedBy:   "system",
+    Md5Hash:     "abcd1234567890abcd1234567890abcd",
+    Metadata:    map[string]string{"version": "1.0"},
+    Timestamp:   time.Now(),
+    Payload:     []interface{}{                 // Array payload
+        "item1",
+        "item2",
+        map[string]interface{}{"nested": "value"},
     },
 }
 ```

@@ -109,7 +109,7 @@ func createTestEvent() models.EventJson {
 		Timestamp:   time.Now(),
 		CreatedBy:   "test-producer",
 		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-		Payload: &map[string]interface{}{
+		Payload: map[string]interface{}{
 			"test_key": "test_value",
 			"number":   42,
 			"boolean":  true,
