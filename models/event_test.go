@@ -13,10 +13,10 @@ import (
 
 func TestEventSerialization(t *testing.T) {
 	// Create a test event with all required fields
-	eventID := uuid.New()
-	sessionID := uuid.New()
-	requestID := uuid.New()
-	tenantID := uuid.New()
+	eventID := uuid.New().String()
+	sessionID := uuid.New().String()
+	requestID := uuid.New().String()
+	tenantID := uuid.New().String()
 	eventType := "test.event.created.v1"
 	eventSource := "test-service"
 	createdBy := "test-producer"
@@ -92,10 +92,10 @@ func TestEventSerialization(t *testing.T) {
 }
 
 func TestEventWithOptionalFields(t *testing.T) {
-	eventID := uuid.New()
-	sessionID := uuid.New()
-	requestID := uuid.New()
-	tenantID := uuid.New()
+	eventID := uuid.New().String()
+	sessionID := uuid.New().String()
+	requestID := uuid.New().String()
+	tenantID := uuid.New().String()
 	eventType := "test.event.updated.v1"
 	eventSource := "test-service"
 	ownerID := "test-owner"
@@ -146,10 +146,10 @@ func TestEventWithOptionalFields(t *testing.T) {
 }
 
 func TestEventJSONFormat(t *testing.T) {
-	eventID := uuid.New()
-	sessionID := uuid.New()
-	requestID := uuid.New()
-	tenantID := uuid.New()
+	eventID := uuid.New().String()
+	sessionID := uuid.New().String()
+	requestID := uuid.New().String()
+	tenantID := uuid.New().String()
 	eventType := "test.event.format.v1"
 	eventSource := "test-service"
 	createdBy := "test-producer"
@@ -178,10 +178,10 @@ func TestEventJSONFormat(t *testing.T) {
 
 	// Verify JSON contains expected fields
 	jsonStr := string(jsonData)
-	if !containsSubstring(jsonStr, eventID.String()) {
+	if !containsSubstring(jsonStr, eventID) {
 		t.Errorf("JSON should contain event ID: %s", jsonStr)
 	}
-	if !containsSubstring(jsonStr, sessionID.String()) {
+	if !containsSubstring(jsonStr, sessionID) {
 		t.Errorf("JSON should contain session ID: %s", jsonStr)
 	}
 	if !containsSubstring(jsonStr, `"test":"data"`) {
@@ -192,10 +192,10 @@ func TestEventJSONFormat(t *testing.T) {
 func TestEmptyEvent(t *testing.T) {
 	// Create a minimal valid event with all required fields
 	event := EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
+		Id:          uuid.New().String(),
+		SessionId:   uuid.New().String(),
+		RequestId:   uuid.New().String(),
+		TenantId:    uuid.New().String(),
 		EventType:   "test.event.v1",
 		EventSource: "test-source",
 		Metadata:    map[string]string{},
@@ -253,10 +253,10 @@ func TestEventJsonValidation(t *testing.T) {
 		{
 			name: "valid complete event",
 			event: EventJson{
-				Id:          uuid.New(),
-				SessionId:   uuid.New(),
-				RequestId:   uuid.New(),
-				TenantId:    uuid.New(),
+				Id:          uuid.New().String(),
+				SessionId:   uuid.New().String(),
+				RequestId:   uuid.New().String(),
+				TenantId:    uuid.New().String(),
 				EventType:   "test.event.created.v1",
 				EventSource: "test-service",
 				Metadata:    map[string]string{"key": "value"},
@@ -270,10 +270,10 @@ func TestEventJsonValidation(t *testing.T) {
 		{
 			name: "minimal valid event",
 			event: EventJson{
-				Id:          uuid.New(),
-				SessionId:   uuid.New(),
-				RequestId:   uuid.New(),
-				TenantId:    uuid.New(),
+				Id:          uuid.New().String(),
+				SessionId:   uuid.New().String(),
+				RequestId:   uuid.New().String(),
+				TenantId:    uuid.New().String(),
 				EventType:   "minimal.event.v1",
 				EventSource: "minimal-service",
 				Metadata:    map[string]string{}, // Required field
@@ -286,10 +286,10 @@ func TestEventJsonValidation(t *testing.T) {
 		{
 			name: "event with zero UUIDs",
 			event: EventJson{
-				Id:          uuid.Nil,
-				SessionId:   uuid.Nil,
-				RequestId:   uuid.Nil,
-				TenantId:    uuid.Nil,
+				Id:          uuid.Nil.String(),
+				SessionId:   uuid.Nil.String(),
+				RequestId:   uuid.Nil.String(),
+				TenantId:    uuid.Nil.String(),
 				EventType:   "zero.uuid.event.v1",
 				EventSource: "zero-service",
 				Metadata:    map[string]string{}, // Required field
@@ -328,19 +328,19 @@ func TestUUIDSerialization(t *testing.T) {
 
 	tests := []struct {
 		name string
-		uuid uuid.UUID
+		uuid string
 	}{
 		{
 			name: "new UUID",
-			uuid: uuid.New(),
+			uuid: uuid.New().String(),
 		},
 		{
 			name: "nil UUID",
-			uuid: uuid.Nil,
+			uuid: uuid.Nil.String(),
 		},
 		{
 			name: "specific UUID",
-			uuid: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			uuid: uuid.MustParse("123e4567-e89b-12d3-a456-426614174000").String(),
 		},
 	}
 
@@ -428,10 +428,10 @@ func TestPayloadHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			event := EventJson{
-				Id:          uuid.New(),
-				SessionId:   uuid.New(),
-				RequestId:   uuid.New(),
-				TenantId:    uuid.New(),
+				Id:          uuid.New().String(),
+				SessionId:   uuid.New().String(),
+				RequestId:   uuid.New().String(),
+				TenantId:    uuid.New().String(),
 				EventType:   "payload.test.v1",
 				EventSource: "payload-service",
 				Metadata:    map[string]string{},
@@ -497,10 +497,10 @@ func TestMetadataHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			event := EventJson{
-				Id:          uuid.New(),
-				SessionId:   uuid.New(),
-				RequestId:   uuid.New(),
-				TenantId:    uuid.New(),
+				Id:          uuid.New().String(),
+				SessionId:   uuid.New().String(),
+				RequestId:   uuid.New().String(),
+				TenantId:    uuid.New().String(),
 				EventType:   "metadata.test.v1",
 				EventSource: "metadata-service",
 				Timestamp:   time.Now(),
@@ -559,10 +559,10 @@ func TestTimestampHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			event := EventJson{
-				Id:          uuid.New(),
-				SessionId:   uuid.New(),
-				RequestId:   uuid.New(),
-				TenantId:    uuid.New(),
+				Id:          uuid.New().String(),
+				SessionId:   uuid.New().String(),
+				RequestId:   uuid.New().String(),
+				TenantId:    uuid.New().String(),
 				EventType:   "timestamp.test.v1",
 				EventSource: "timestamp-service",
 				Metadata:    map[string]string{},
@@ -598,10 +598,10 @@ func TestEventEdgeCases(t *testing.T) {
 		longString := strings.Repeat("a", 10000)
 
 		event := EventJson{
-			Id:          uuid.New(),
-			SessionId:   uuid.New(),
-			RequestId:   uuid.New(),
-			TenantId:    uuid.New(),
+			Id:          uuid.New().String(),
+			SessionId:   uuid.New().String(),
+			RequestId:   uuid.New().String(),
+			TenantId:    uuid.New().String(),
 			EventType:   longString,
 			EventSource: longString,
 			Metadata:    map[string]string{},
@@ -622,10 +622,10 @@ func TestEventEdgeCases(t *testing.T) {
 
 	t.Run("unicode characters", func(t *testing.T) {
 		event := EventJson{
-			Id:          uuid.New(),
-			SessionId:   uuid.New(),
-			RequestId:   uuid.New(),
-			TenantId:    uuid.New(),
+			Id:          uuid.New().String(),
+			SessionId:   uuid.New().String(),
+			RequestId:   uuid.New().String(),
+			TenantId:    uuid.New().String(),
 			EventType:   "测试.事件.创建.v1",
 			EventSource: "测试服务",
 			CreatedBy:   "测试用户",
@@ -653,10 +653,10 @@ func BenchmarkEventMarshaling(b *testing.B) {
 	validMd5Hash := "d41d8cd98f00b204e9800998ecf8427e"
 
 	event := EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
+		Id:          uuid.New().String(),
+		SessionId:   uuid.New().String(),
+		RequestId:   uuid.New().String(),
+		TenantId:    uuid.New().String(),
 		EventType:   "benchmark.event.v1",
 		EventSource: "benchmark-service",
 		Metadata:    map[string]string{"key": "value"},
@@ -674,10 +674,10 @@ func BenchmarkEventMarshaling(b *testing.B) {
 
 func BenchmarkEventUnmarshaling(b *testing.B) {
 	event := EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
+		Id:          uuid.New().String(),
+		SessionId:   uuid.New().String(),
+		RequestId:   uuid.New().String(),
+		TenantId:    uuid.New().String(),
 		EventType:   "benchmark.event.v1",
 		EventSource: "benchmark-service",
 		Metadata:    map[string]string{"key": "value"},

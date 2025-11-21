@@ -2,14 +2,10 @@
 
 package models
 
-import (
-	"encoding/json"
-	"fmt"
-	"regexp"
-	"time"
-
-	"github.com/google/uuid"
-)
+import "encoding/json"
+import "fmt"
+import "regexp"
+import "time"
 
 // Domain event carrying payload, context, and metadata.
 type EventJson struct {
@@ -35,7 +31,7 @@ type EventJson struct {
 	EventType string `json:"event_type" yaml:"event_type" mapstructure:"event_type"`
 
 	// Unique identifier for the event.
-	Id uuid.UUID `json:"id" yaml:"id" mapstructure:"id"`
+	Id string `json:"id" yaml:"id" mapstructure:"id"`
 
 	// MD5 hash of the canonical event representation.
 	Md5Hash string `json:"md5_hash" yaml:"md5_hash" mapstructure:"md5_hash"`
@@ -56,16 +52,16 @@ type EventJson struct {
 	PayloadUri *string `json:"payload_uri,omitempty" yaml:"payload_uri,omitempty" mapstructure:"payload_uri,omitempty"`
 
 	// Upstream request identifier.
-	RequestId uuid.UUID `json:"request_id" yaml:"request_id" mapstructure:"request_id"`
+	RequestId string `json:"request_id" yaml:"request_id" mapstructure:"request_id"`
 
 	// Correlation/session identifier.
-	SessionId uuid.UUID `json:"session_id" yaml:"session_id" mapstructure:"session_id"`
+	SessionId string `json:"session_id" yaml:"session_id" mapstructure:"session_id"`
 
 	// Optional string key/value tags.
 	Tags *map[string]string `json:"tags,omitempty" yaml:"tags,omitempty" mapstructure:"tags,omitempty"`
 
 	// Tenant identifier.
-	TenantId uuid.UUID `json:"tenant_id" yaml:"tenant_id" mapstructure:"tenant_id"`
+	TenantId string `json:"tenant_id" yaml:"tenant_id" mapstructure:"tenant_id"`
 
 	// Event timestamp.
 	Timestamp time.Time `json:"timestamp" yaml:"timestamp" mapstructure:"timestamp"`

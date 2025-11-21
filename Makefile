@@ -92,11 +92,11 @@ install-tools:
 generate-types:
 	@echo "Generating Go types from JSON schemas..."
 	@echo "Converting system-topics.json to Go types..."
-	@go-jsonschema --package kafka --output kafka/system_topics.go schemas/system-topics.json
+	@go-jsonschema --package dskafka --output dskafka/system_topics.go schemas/system-topics.json
 	@echo "Converting event.json to Go types..."
 	@go-jsonschema --package models --output models/event.go schemas/event.json
 	@echo "Go types generated successfully:"
-	@echo "  - kafka/system_topics.go (from schemas/system-topics.json)"
+	@echo "  - dskafka/system_topics.go (from schemas/system-topics.json)"
 	@echo "  - models/event.go (from schemas/event.json)"
 	@echo ""
 	@echo "NOTE: After generation, manually update models/event.go to use uuid.UUID types:"

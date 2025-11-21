@@ -186,9 +186,9 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 	}
 
 	// Choose a stable key for partitioning.
-	key := evt.Id.String()
+	key := evt.Id
 	if key == "00000000-0000-0000-0000-000000000000" {
-		key = evt.SessionId.String()
+		key = evt.SessionId
 	}
 
 	kh := make([]kafka.Header, 0, len(headers)+2)

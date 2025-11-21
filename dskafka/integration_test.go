@@ -44,10 +44,10 @@ func TestIntegrationSendEvent(t *testing.T) {
 
 	// Create test event
 	event := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
+		Id:          uuid.New().String(),
+		SessionId:   uuid.New().String(),
+		RequestId:   uuid.New().String(),
+		TenantId:    uuid.New().String(),
 		EventType:   "integration.test.v1",
 		EventSource: "integration-test",
 		Metadata:    map[string]string{"test": "integration"},
@@ -107,10 +107,10 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 	defer producer.Close()
 
 	event := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
+		Id:          uuid.New().String(),
+		SessionId:   uuid.New().String(),
+		RequestId:   uuid.New().String(),
+		TenantId:    uuid.New().String(),
 		EventType:   "benchmark.test.v1",
 		EventSource: "benchmark-test",
 		Metadata:    map[string]string{"bench": "test"},
@@ -127,7 +127,7 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		// Update event ID for each iteration
-		event.Id = uuid.New()
+		event.Id = uuid.New().String()
 		err := producer.SendEvent(ctx, "benchmark-events", event)
 		if err != nil {
 			b.Errorf("Failed to send event: %v", err)

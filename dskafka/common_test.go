@@ -99,10 +99,10 @@ func TestHeader(t *testing.T) {
 // Helper function to create a test event
 func createTestEvent() models.EventJson {
 	return models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
+		Id:          uuid.New().String(),
+		SessionId:   uuid.New().String(),
+		RequestId:   uuid.New().String(),
+		TenantId:    uuid.New().String(),
 		EventType:   "test.event.created.v1",
 		EventSource: "test-service",
 		Metadata:    map[string]string{"meta1": "value1"},
