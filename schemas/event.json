@@ -52,9 +52,7 @@
       "description": "Optional human-readable message."
     },
     "payload": {
-      "type": ["object", "null"],
-      "additionalProperties": true,
-      "description": "JSON body of the event (arbitrary key/value map)."
+      "description": "JSON body of the event (can be object, array, or any valid JSON)."
     },
     "payload_uri": {
       "type": ["string", "null"],
@@ -90,9 +88,7 @@
       "pattern": "^[A-Fa-f0-9]{32}$"
     },
     "context": {
-      "type": ["object", "null"],
-      "additionalProperties": true,
-      "description": "Processing context for consumers (arbitrary key/value map)."
+      "description": "Processing context for consumers (can be object, array, or any valid JSON)."
     },
     "context_uri": {
       "type": ["string", "null"],
@@ -145,6 +141,29 @@
         "node": "worker-7"
       },
       "context_uri": "https://svc.example.com/runs/98765/context"
+    },
+    {
+      "id": "7c9f2e1d-8b3a-4f5c-9d6e-1a2b3c4d5e6f",
+      "session_id": "2a3b4c5d-6e7f-8a9b-0c1d-2e3f4a5b6c7d",
+      "request_id": "8e9f0a1b-2c3d-4e5f-6a7b-8c9d0e1f2a3b",
+      "tenant_id": "4d5e6f7a-8b9c-0d1e-2f3a-4b5c6d7e8f9a",
+      "event_type": "items.updated",
+      "event_source": "inventory-service",
+      "message": "Inventory items updated.",
+      "payload": [
+        "item-001",
+        "item-002",
+        {
+          "id": "item-003",
+          "quantity": 42
+        }
+      ],
+      "metadata": {
+        "batch_id": "batch-789"
+      },
+      "timestamp": "2025-09-04T11:30:45Z",
+      "created_by": "inventory-service",
+      "md5_hash": "5d41402abc4b2a76b9719d911017c592"
     }
   ]
 }
