@@ -183,8 +183,8 @@ func main() {
 
 	log.Println("Testing SafeSendEvent (fire-and-forget)")
 	// Test SafeSendEvent - errors are logged but execution continues
-	producer.SafeSendEvent(context.Background(), "ds.workflow.pipeline.job.requested.v1", eventWithObjectForSafeSend)
-	log.Println("SafeSendEvent completed - any errors were logged automatically")
+	producer.SafeSendEvent(context.Background(), *topic, eventWithObjectForSafeSend)
+	log.Println("✅ Successfully sent event with SafeSendEvent - any errors were logged automatically")
 
 	log.Println("Done - sent 4 events total (object, array, object with headers and safe send)")
 }
