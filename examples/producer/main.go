@@ -167,5 +167,24 @@ func main() {
 		log.Println("✅ Successfully sent event with custom headers")
 	}
 
-	log.Println("Done - sent 3 events total (object, array, and object with headers)")
+	eventWithObjectForSafeSend := models.EventJson{
+		Id:          uuid.New(),
+		SessionId:   uuid.New(),
+		RequestId:   uuid.New(),
+		TenantId:    uuid.New(),
+		EventType:   "test.object.v1",
+		EventSource: "TEST-PRODUCER-GO",
+		CreatedBy:   "system",
+		Md5Hash:     "abcd1234567890abcd1234567890abcd",
+		Metadata:    map[string]string{"version": "1.0"},
+		Timestamp:   time.Now(),
+		Payload:     map[string]interface{}{"userId": 123, "email": "user@example.com"},
+	}
+
+	log.Println("Testing SafeSendEvent (fire-and-forget)")
+	// Test SafeSendEvent - errors are logged but execution continues
+	producer.SafeSendEvent(context.Background(), *topic, eventWithObjectForSafeSend)
+	log.Println("✅ Successfully sent event with SafeSendEvent - any errors were logged automatically")
+
+	log.Println("Done - sent 4 events total (object, array, object with headers and safe send)")
 }
