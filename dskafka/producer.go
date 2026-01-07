@@ -266,14 +266,6 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 //	producer.SafeSendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
 func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) {
-	// Validate event before sending
-	if err := validateEvent(evt); err != nil {
-		log.Printf("kafka: event validation failed: %v", err)
-		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
-			evt.Id.String(), evt.EventType, evt.EventSource)
-		return
-	}
-
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
 		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
 		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
