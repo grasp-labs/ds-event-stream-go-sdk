@@ -143,8 +143,21 @@ func (p *Producer) Close() error {
 	return p.w.Close()
 }
 
+// validateEvent checks if an event has all required fields populated.
+// Returns an error if any required field is missing or empty.
+func validateEvent(evt models.EventJson) error {
+	if evt.EventSource == "" {
+		return errors.New("kafka: event_source is required and cannot be empty")
+	}
+	return nil
+}
+
 // SendEvent JSON-encodes an EventJson and sends it to the specified Kafka topic.
 // The event is serialized to JSON with UUID fields automatically converted to strings.
+//
+// Validation:
+//   - Ensures event_source is not empty before sending
+//   - Returns error if validation fails
 //
 // Partitioning:
 //   - Primary key: evt.Id (if not zero UUID)
@@ -176,6 +189,11 @@ func (p *Producer) Close() error {
 func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
+	}
+
+	// Validate event before sending
+	if err := validateEvent(evt); err != nil {
+		return err
 	}
 
 	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
@@ -248,6 +266,14 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 //	producer.SafeSendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
 func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) {
+	// Validate event before sending
+	if err := validateEvent(evt); err != nil {
+		log.Printf("kafka: event validation failed: %v", err)
+		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
+			evt.Id.String(), evt.EventType, evt.EventSource)
+		return
+	}
+
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
 		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
 		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
