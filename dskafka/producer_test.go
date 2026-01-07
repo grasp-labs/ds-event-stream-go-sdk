@@ -567,6 +567,112 @@ func TestSendEventContextAndTimeout(t *testing.T) {
 	})
 }
 
+// TestValidateEvent tests the event validation function
+func TestValidateEvent(t *testing.T) {
+	tests := []struct {
+		name      string
+		event     models.EventJson
+		wantError bool
+		errorMsg  string
+	}{
+		{
+			name: "valid event with event_source",
+			event: models.EventJson{
+				Id:          uuid.New(),
+				SessionId:   uuid.New(),
+				RequestId:   uuid.New(),
+				TenantId:    uuid.New(),
+				EventType:   "test.event.v1",
+				EventSource: "test-service",
+				Metadata:    map[string]string{},
+				Timestamp:   time.Now(),
+				CreatedBy:   "test-producer",
+				Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+			},
+			wantError: false,
+		},
+		{
+			name: "invalid event with empty event_source",
+			event: models.EventJson{
+				Id:          uuid.New(),
+				SessionId:   uuid.New(),
+				RequestId:   uuid.New(),
+				TenantId:    uuid.New(),
+				EventType:   "test.event.v1",
+				EventSource: "", // Empty event source
+				Metadata:    map[string]string{},
+				Timestamp:   time.Now(),
+				CreatedBy:   "test-producer",
+				Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+			},
+			wantError: true,
+			errorMsg:  "kafka: event_source is required and cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateEvent(tt.event)
+			if tt.wantError {
+				assert.Error(t, err)
+				assert.Equal(t, tt.errorMsg, err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+// TestSendEventWithValidation tests that SendEvent validates events before sending
+func TestSendEventWithValidation(t *testing.T) {
+	config := Config{
+		Brokers: []string{"localhost:9092"},
+		ClientCredentials: ClientCredentials{
+			Username: "test_user",
+			Password: "test_pass",
+		},
+	}
+
+	producer, err := NewProducer(config)
+	assert.NoError(t, err)
+	assert.NotNil(t, producer)
+	defer func() {
+		_ = producer.Close()
+	}()
+
+	ctx := context.Background()
+
+	t.Run("rejects event with empty event_source", func(t *testing.T) {
+		invalidEvent := models.EventJson{
+			Id:          uuid.New(),
+			SessionId:   uuid.New(),
+			RequestId:   uuid.New(),
+			TenantId:    uuid.New(),
+			EventType:   "test.event.v1",
+			EventSource: "", // Empty event source
+			Metadata:    map[string]string{},
+			Timestamp:   time.Now(),
+			CreatedBy:   "test-producer",
+			Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+		}
+
+		err := producer.SendEvent(ctx, "test-topic", invalidEvent)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "event_source is required")
+	})
+
+	t.Run("accepts valid event", func(t *testing.T) {
+		validEvent := createTestEvent()
+		// This will fail to send due to no actual Kafka connection,
+		// but validation should pass and we should get a different error
+		err := producer.SendEvent(ctx, "test-topic", validEvent)
+		// Should not be a validation error
+		if err != nil {
+			assert.NotContains(t, err.Error(), "event_source is required")
+		}
+	})
+}
+
 // Benchmark tests for producer operations
 func BenchmarkSendEvent(b *testing.B) {
 	var producer *Producer // Using nil producer for benchmark structure
