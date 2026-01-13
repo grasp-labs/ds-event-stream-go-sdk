@@ -289,3 +289,41 @@ func TestEvent_AsJSON_RejectsNilEvent(t *testing.T) {
 	assert.Nil(t, eventJson)
 	assert.Contains(t, err.Error(), "event pointer is nil")
 }
+
+func TestEvent_AsJSON_ReturnsImmutableCopy(t *testing.T) {
+	// Create a valid event
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+	require.NoError(t, err)
+
+	// Get the JSON representation
+	eventJson1, err := event.AsJSON()
+	require.NoError(t, err)
+	originalEventType := eventJson1.EventType
+
+	// Modify the returned EventJson
+	eventJson1.EventType = "modified.event.type"
+	eventJson1.EventSource = "modified-source"
+
+	// Get the JSON representation again
+	eventJson2, err := event.AsJSON()
+	require.NoError(t, err)
+
+	// Verify the original Event was not affected by the modification
+	assert.Equal(t, originalEventType, eventJson2.EventType)
+	assert.Equal(t, "test-service", eventJson2.EventSource)
+	assert.NotEqual(t, "modified.event.type", eventJson2.EventType)
+	assert.NotEqual(t, "modified-source", eventJson2.EventSource)
+
+	// Also verify via getter methods that the Event itself wasn't modified
+	assert.Equal(t, originalEventType, event.EventType())
+	assert.Equal(t, "test-service", event.EventSource())
+}

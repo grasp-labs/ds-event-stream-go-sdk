@@ -67,6 +67,7 @@ func NewEvent(
 
 // AsJSON returns the underlying EventJson for serialization.
 // Returns an error if the Event was not properly initialized via NewEvent().
+// Returns a copy to maintain immutability of the validated Event.
 func (e *Event) AsJSON() (*EventJson, error) {
 	// Check for nil pointer to prevent panic
 	if e == nil {
@@ -78,7 +79,9 @@ func (e *Event) AsJSON() (*EventJson, error) {
 		return nil, fmt.Errorf("invalid event: event must be created using NewEvent()")
 	}
 
-	return &e.json, nil
+	// Return a copy to prevent external modification of the validated Event
+	jsonCopy := e.json
+	return &jsonCopy, nil
 }
 
 // Setters for optional fields
