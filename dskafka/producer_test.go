@@ -2,7 +2,6 @@ package dskafka
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -466,10 +465,8 @@ func TestSendEventJSONMarshalingLogic(t *testing.T) {
 	// Test the JSON marshaling doesn't fail for valid events
 	event := createTestEvent()
 
-	// Test that we can marshal the event (this tests the JSON marshaling path)
-	eventJson, err := event.AsJSON()
-	assert.NoError(t, err)
-	data, err := json.Marshal(eventJson)
+	// Test that we can get JSON bytes from the event
+	data, err := event.AsJSON()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, data)
 

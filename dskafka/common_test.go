@@ -134,8 +134,7 @@ func BenchmarkEventJSONMarshal(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		eventJson, _ := event.AsJSON()
-		_, _ = json.Marshal(eventJson)
+		_, _ = event.AsJSON()
 	}
 }
 
@@ -388,10 +387,8 @@ func TestCreateTestEventVariations(t *testing.T) {
 	t.Run("event JSON marshaling", func(t *testing.T) {
 		event := createTestEvent()
 
-		// Marshal the EventJson representation
-		eventJson, err := event.AsJSON()
-		assert.NoError(t, err)
-		data, err := json.Marshal(eventJson)
+		// Get JSON bytes from event
+		data, err := event.AsJSON()
 		assert.NoError(t, err)
 		assert.NotEmpty(t, data)
 

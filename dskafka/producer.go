@@ -2,7 +2,6 @@ package dskafka
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -184,23 +183,16 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Even
 		return errors.New("kafka: producer not initialized")
 	}
 
-	// Get the underlying EventJson for serialization
-	eventJson, err := evt.AsJSON()
+	// Get the JSON bytes for the event
+	buf, err := evt.AsJSON()
 	if err != nil {
 		return fmt.Errorf("kafka: invalid event: %w", err)
 	}
 
-	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
-	buf, err := json.Marshal(eventJson)
-	if err != nil {
-		log.Println("kafka: error marshalling event:", err)
-		return err
-	}
-
-	// Choose a stable key for partitioning.
-	key := eventJson.Id.String()
+	// Choose a stable key for partitioning using getter methods
+	key := evt.Id().String()
 	if key == "00000000-0000-0000-0000-000000000000" {
-		key = eventJson.SessionId.String()
+		key = evt.SessionId().String()
 	}
 
 	kh := make([]kafka.Header, 0, len(headers)+2)

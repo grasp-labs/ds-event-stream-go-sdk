@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
@@ -73,7 +74,7 @@ type Event struct {
 //	event.SetTags(map[string]string{"team": "auth", "priority": "high"})
 //
 // After creation, use getter methods to access field values and AsJSON() to
-// serialize for transmission. The Event remains immutable; AsJSON() returns a copy.
+// serialize for transmission. The Event remains immutable.
 func NewEvent(
 	eventType string,
 	eventSource string,
@@ -121,10 +122,9 @@ func NewEvent(
 	}, nil
 }
 
-// AsJSON returns the underlying EventJson for serialization.
+// AsJSON returns the JSON representation of the Event as bytes.
 // Returns an error if the Event was not properly initialized via NewEvent().
-// Returns a copy to maintain immutability of the validated Event.
-func (e *Event) AsJSON() (*EventJson, error) {
+func (e *Event) AsJSON() ([]byte, error) {
 	// Check for nil pointer to prevent panic
 	if e == nil {
 		return nil, fmt.Errorf("invalid event: event pointer is nil")
@@ -135,9 +135,7 @@ func (e *Event) AsJSON() (*EventJson, error) {
 		return nil, fmt.Errorf("invalid event: event must be created using NewEvent()")
 	}
 
-	// Return a copy to prevent external modification of the validated Event
-	jsonCopy := e.json
-	return &jsonCopy, nil
+	return json.Marshal(&e.json)
 }
 
 // Setters for optional fields
