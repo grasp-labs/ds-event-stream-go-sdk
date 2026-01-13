@@ -8,6 +8,9 @@ import (
 	"github.com/google/uuid"
 )
 
+// md5HashPattern is a compiled regex for validating MD5 hash format (32-character hex string)
+var md5HashPattern = regexp.MustCompile("^[A-Fa-f0-9]{32}$")
+
 // Event wraps EventJson with validated construction.
 // The json field is unexported, so Event can only be properly initialized via NewEvent().
 type Event struct {
@@ -42,8 +45,7 @@ func NewEvent(
 		return nil, fmt.Errorf("md5_hash cannot be empty")
 	}
 	// Validate md5Hash matches the required pattern (32-character hex string)
-	matched, _ := regexp.MatchString("^[A-Fa-f0-9]{32}$", md5Hash)
-	if !matched {
+	if !md5HashPattern.MatchString(md5Hash) {
 		return nil, fmt.Errorf("md5_hash must be a valid 32-character hex string")
 	}
 
