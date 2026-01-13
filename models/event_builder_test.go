@@ -97,6 +97,57 @@ func TestNewEvent_NilMetadata(t *testing.T) {
 	assert.Contains(t, err.Error(), "metadata cannot be nil")
 }
 
+func TestNewEvent_ZeroValueTenantId(t *testing.T) {
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.Nil, // zero-value UUID
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+
+	assert.Error(t, err)
+	assert.Nil(t, event)
+	assert.Contains(t, err.Error(), "tenant_id cannot be zero-value UUID")
+}
+
+func TestNewEvent_ZeroValueSessionId(t *testing.T) {
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.Nil, // zero-value UUID
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+
+	assert.Error(t, err)
+	assert.Nil(t, event)
+	assert.Contains(t, err.Error(), "session_id cannot be zero-value UUID")
+}
+
+func TestNewEvent_ZeroValueRequestId(t *testing.T) {
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.Nil, // zero-value UUID
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+
+	assert.Error(t, err)
+	assert.Nil(t, event)
+	assert.Contains(t, err.Error(), "request_id cannot be zero-value UUID")
+}
+
 func TestNewEvent_EmptyMd5Hash(t *testing.T) {
 	event, err := NewEvent(
 		"test.event",

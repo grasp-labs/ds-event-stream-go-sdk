@@ -38,7 +38,7 @@ type Event struct {
 //   - eventType, eventSource, and createdBy must have minimum length of 1
 //   - metadata must not be nil (use empty map if no metadata needed)
 //   - md5Hash must match the pattern ^[A-Fa-f0-9]{32}$ (32-character hex string)
-//   - UUIDs are validated by the uuid.UUID type itself
+//   - tenantId, sessionId, and requestId must not be zero-value UUIDs (00000000-0000-0000-0000-000000000000)
 //
 // Returns:
 //   - *Event: A validated Event with a unique generated ID and current timestamp
@@ -51,6 +51,9 @@ type Event struct {
 //   - "metadata cannot be nil" - when metadata is nil
 //   - "md5_hash cannot be empty" - when md5Hash is empty string
 //   - "md5_hash must be a valid 32-character hex string" - when md5Hash format is invalid
+//   - "tenant_id cannot be zero-value UUID" - when tenantId is all zeros
+//   - "session_id cannot be zero-value UUID" - when sessionId is all zeros
+//   - "request_id cannot be zero-value UUID" - when requestId is all zeros
 //
 // Example:
 //
@@ -94,6 +97,15 @@ func NewEvent(
 	}
 	if len(createdBy) < 1 {
 		return nil, fmt.Errorf("created_by cannot be empty")
+	}
+	if tenantId == uuid.Nil {
+		return nil, fmt.Errorf("tenant_id cannot be zero-value UUID")
+	}
+	if sessionId == uuid.Nil {
+		return nil, fmt.Errorf("session_id cannot be zero-value UUID")
+	}
+	if requestId == uuid.Nil {
+		return nil, fmt.Errorf("request_id cannot be zero-value UUID")
 	}
 	if metadata == nil {
 		return nil, fmt.Errorf("metadata cannot be nil")
