@@ -467,7 +467,9 @@ func TestSendEventJSONMarshalingLogic(t *testing.T) {
 	event := createTestEvent()
 
 	// Test that we can marshal the event (this tests the JSON marshaling path)
-	data, err := json.Marshal(event)
+	eventJson, err := event.AsJSON()
+	assert.NoError(t, err)
+	data, err := json.Marshal(eventJson)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, data)
 

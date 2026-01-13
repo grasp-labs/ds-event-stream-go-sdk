@@ -134,7 +134,8 @@ func BenchmarkEventJSONMarshal(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_, _ = json.Marshal(event)
+		eventJson, _ := event.AsJSON()
+		_, _ = json.Marshal(eventJson)
 	}
 }
 
