@@ -263,7 +263,10 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Even
 func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) {
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
 		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
-		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
-			evt.Id().String(), evt.EventType(), evt.EventSource())
+		// Only log event details if evt is not nil to prevent panic
+		if evt != nil {
+			log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
+				evt.Id().String(), evt.EventType(), evt.EventSource())
+		}
 	}
 }

@@ -640,6 +640,31 @@ func TestSendEventWithValidation(t *testing.T) {
 	})
 }
 
+// TestSafeSendEvent_WithNilEvent verifies that SafeSendEvent doesn't panic when given a nil event
+func TestSafeSendEvent_WithNilEvent(t *testing.T) {
+	config := Config{
+		Brokers: []string{"localhost:9092"},
+	}
+	producer, err := NewProducer(config)
+	if err != nil {
+		t.Fatalf("Failed to create producer: %v", err)
+	}
+	defer func() {
+		if cerr := producer.Close(); cerr != nil {
+			t.Logf("Failed to close producer: %v", cerr)
+		}
+	}()
+
+	ctx := context.Background()
+
+	// This should not panic even though evt is nil
+	// SafeSendEvent should handle the error gracefully
+	assert.NotPanics(t, func() {
+		var nilEvent *models.Event
+		producer.SafeSendEvent(ctx, "test-topic", nilEvent)
+	})
+}
+
 // Benchmark tests for producer operations
 func BenchmarkSendEvent(b *testing.B) {
 	var producer *Producer // Using nil producer for benchmark structure
