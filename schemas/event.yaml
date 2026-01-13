@@ -32,9 +32,11 @@ components:
           description: Optional owner id.
         event_type:
           type: string
+          minLength: 1
           description: Event type.
         event_source:
           type: string
+          minLength: 1
           description: Logical source of the event.
         event_source_uri:
           type: string
@@ -51,9 +53,11 @@ components:
           nullable: true
           description: Optional human-readable message.
         payload:
+          type: object
           nullable: true
+          additionalProperties: true
           description: >
-            JSON body of the event (can be object, array, or any valid JSON).
+            JSON body of the event (arbitrary key/value map).
         payload_uri:
           type: string
           format: uri
@@ -76,15 +80,18 @@ components:
           description: Event timestamp.
         created_by:
           type: string
+          minLength: 1
           description: Identifier of the creator/producer.
         md5_hash:
           type: string
           description: MD5 hash of the canonical event representation.
           pattern: '^[A-Fa-f0-9]{32}$'
         context:
+          type: object
           nullable: true
+          additionalProperties: true
           description: >
-            Processing context for consumers (can be object, array, or any valid JSON).
+            Processing context for consumers (arbitrary key/value map).
         context_uri:
           type: string
           format: uri

@@ -112,6 +112,15 @@ func (j *EventJson) UnmarshalJSON(value []byte) error {
 	if err := json.Unmarshal(value, &plain); err != nil {
 		return err
 	}
+	if len(plain.CreatedBy) < 1 {
+		return fmt.Errorf("field %s length: must be >= %d", "created_by", 1)
+	}
+	if len(plain.EventSource) < 1 {
+		return fmt.Errorf("field %s length: must be >= %d", "event_source", 1)
+	}
+	if len(plain.EventType) < 1 {
+		return fmt.Errorf("field %s length: must be >= %d", "event_type", 1)
+	}
 	if matched, _ := regexp.MatchString(`^[A-Fa-f0-9]{32}$`, string(plain.Md5Hash)); !matched {
 		return fmt.Errorf("field %s pattern match: must match %s", "Md5Hash", `^[A-Fa-f0-9]{32}$`)
 	}

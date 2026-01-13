@@ -143,21 +143,12 @@ func (p *Producer) Close() error {
 	return p.w.Close()
 }
 
-// validateEvent checks if an event has all required fields populated.
-// Returns an error if any required field is missing or empty.
-func validateEvent(evt models.EventJson) error {
-	if evt.EventSource == "" {
-		return errors.New("kafka: event_source is required and cannot be empty")
-	}
-	return nil
-}
-
-// SendEvent JSON-encodes an EventJson and sends it to the specified Kafka topic.
+// SendEvent JSON-encodes an Event and sends it to the specified Kafka topic.
 // The event is serialized to JSON with UUID fields automatically converted to strings.
 //
 // Validation:
-//   - Ensures event_source is not empty before sending
-//   - Returns error if validation fails
+//   - Event is already validated at construction via NewEvent()
+//   - No additional validation is performed
 //
 // Partitioning:
 //   - Primary key: evt.Id (if not zero UUID)
@@ -176,7 +167,7 @@ func validateEvent(evt models.EventJson) error {
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
 //   - topic: Target Kafka topic name
-//   - evt: Event to send (must be valid EventJson with required fields)
+//   - evt: Event to send (must be created via NewEvent())
 //   - headers: Optional custom headers to add to the message
 //
 // Returns:
@@ -184,29 +175,28 @@ func validateEvent(evt models.EventJson) error {
 //
 // Example:
 //
+//	event, _ := models.NewEvent(...)
 //	err := producer.SendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
-func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) error {
+func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
 	}
 
-	// Validate event before sending
-	if err := validateEvent(evt); err != nil {
-		return err
-	}
+	// Get the underlying EventJson for serialization
+	eventJson := evt.AsJSON()
 
 	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
-	buf, err := json.Marshal(evt)
+	buf, err := json.Marshal(eventJson)
 	if err != nil {
 		log.Println("kafka: error marshalling event:", err)
 		return err
 	}
 
 	// Choose a stable key for partitioning.
-	key := evt.Id.String()
+	key := eventJson.Id.String()
 	if key == "00000000-0000-0000-0000-000000000000" {
-		key = evt.SessionId.String()
+		key = eventJson.SessionId.String()
 	}
 
 	kh := make([]kafka.Header, 0, len(headers)+2)
@@ -254,7 +244,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
 //   - topic: Target Kafka topic name
-//   - evt: Event to send (must be valid EventJson with required fields)
+//   - evt: Event to send (must be created via NewEvent())
 //   - headers: Optional custom headers to add to the message
 //
 // Note: This function logs all errors using the standard log package.
@@ -262,21 +252,14 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 //
 // Example:
 //
+//	event, _ := models.NewEvent(...)
 //	// Fire and forget - errors are logged but not returned
 //	producer.SafeSendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
-func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) {
-	// Validate event before sending
-	if err := validateEvent(evt); err != nil {
-		log.Printf("kafka: event validation failed: %v", err)
-		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
-			evt.Id.String(), evt.EventType, evt.EventSource)
-		return
-	}
-
+func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) {
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
 		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
 		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
-			evt.Id.String(), evt.EventType, evt.EventSource)
+			evt.Id().String(), evt.EventType(), evt.EventSource())
 	}
 }

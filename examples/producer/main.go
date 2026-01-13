@@ -101,20 +101,22 @@ func main() {
 	}()
 
 	log.Println("Creating event with object payload")
-	// Create an event with object payload
-	eventWithObject := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   "test.object.v1",
-		EventSource: "TEST-PRODUCER-GO",
-		CreatedBy:   "system",
-		Md5Hash:     "abcd1234567890abcd1234567890abcd",
-		Metadata:    map[string]string{"version": "1.0"},
-		Timestamp:   time.Now(),
-		Payload:     map[string]interface{}{"userId": 123, "email": "user@example.com"},
+	// Create an event with object payload using validated constructor
+	eventWithObject, err := models.NewEvent(
+		"test.object.v1",                    // eventType
+		"TEST-PRODUCER-GO",                  // eventSource
+		"system",                            // createdBy
+		uuid.New(),                          // tenantId
+		uuid.New(),                          // sessionId
+		uuid.New(),                          // requestId
+		map[string]string{"version": "1.0"}, // metadata
+		"abcd1234567890abcd1234567890abcd",  // md5Hash
+	)
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
 	}
+
+	eventWithObject.SetPayload(map[string]interface{}{"userId": 123, "email": "user@example.com"})
 
 	log.Println("Sending event with object payload")
 	err = producer.SendEvent(context.Background(), *topic, eventWithObject)
@@ -125,25 +127,27 @@ func main() {
 	}
 
 	log.Println("Creating event with array payload")
-	// Create an event with array payload
-	eventWithArray := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   "test.array.v1",
-		EventSource: "TEST-PRODUCER-GO",
-		CreatedBy:   "system",
-		Md5Hash:     "abcd1234567890abcd1234567890abcd",
-		Metadata:    map[string]string{"version": "1.0"},
-		Timestamp:   time.Now(),
-		Payload: []interface{}{
-			"item1",
-			"item2",
-			map[string]interface{}{"nested": "value"},
-			42,
-		},
+	// Create an event with array payload using validated constructor
+	eventWithArray, err := models.NewEvent(
+		"test.array.v1",                     // eventType
+		"TEST-PRODUCER-GO",                  // eventSource
+		"system",                            // createdBy
+		uuid.New(),                          // tenantId
+		uuid.New(),                          // sessionId
+		uuid.New(),                          // requestId
+		map[string]string{"version": "1.0"}, // metadata
+		"abcd1234567890abcd1234567890abcd",  // md5Hash
+	)
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
 	}
+
+	eventWithArray.SetPayload([]interface{}{
+		"item1",
+		"item2",
+		map[string]interface{}{"nested": "value"},
+		42,
+	})
 
 	log.Println("Sending event with array payload")
 	err = producer.SendEvent(context.Background(), *topic, eventWithArray)
@@ -154,12 +158,11 @@ func main() {
 	}
 
 	log.Println("Sending event with custom headers")
-	// Send with custom headers
+	// Send with custom headers (reuse existing event)
 	headers := []dskafka.Header{
 		{Key: "source", Value: "my-service"},
 		{Key: "version", Value: "1.0"},
 	}
-	eventWithObject.Id = uuid.New() // new ID for the new event
 	err = producer.SendEvent(context.Background(), *topic, eventWithObject, headers...)
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
@@ -167,23 +170,25 @@ func main() {
 		log.Println("✅ Successfully sent event with custom headers")
 	}
 
-	eventWithObjectForSafeSend := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   "test.object.v1",
-		EventSource: "TEST-PRODUCER-GO",
-		CreatedBy:   "system",
-		Md5Hash:     "abcd1234567890abcd1234567890abcd",
-		Metadata:    map[string]string{"version": "1.0"},
-		Timestamp:   time.Now(),
-		Payload:     map[string]interface{}{"userId": 123, "email": "user@example.com"},
-	}
-
 	log.Println("Testing SafeSendEvent (fire-and-forget)")
 	// Test SafeSendEvent - errors are logged but execution continues
-	producer.SafeSendEvent(context.Background(), *topic, eventWithObjectForSafeSend)
+	// Create another event for safe send
+	eventForSafeSend, err := models.NewEvent(
+		"test.object.v1",                    // eventType
+		"TEST-PRODUCER-GO",                  // eventSource
+		"system",                            // createdBy
+		uuid.New(),                          // tenantId
+		uuid.New(),                          // sessionId
+		uuid.New(),                          // requestId
+		map[string]string{"version": "1.0"}, // metadata
+		"abcd1234567890abcd1234567890abcd",  // md5Hash
+	)
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
+	}
+	eventForSafeSend.SetPayload(map[string]interface{}{"userId": 456, "email": "another@example.com"})
+
+	producer.SafeSendEvent(context.Background(), *topic, eventForSafeSend)
 	log.Println("✅ Successfully sent event with SafeSendEvent - any errors were logged automatically")
 
 	log.Println("Done - sent 4 events total (object, array, object with headers and safe send)")

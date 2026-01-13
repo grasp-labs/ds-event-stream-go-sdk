@@ -96,25 +96,30 @@ func TestHeader(t *testing.T) {
 	}
 }
 
-// Helper function to create a test event
-func createTestEvent() models.EventJson {
-	return models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   "test.event.created.v1",
-		EventSource: "test-service",
-		Metadata:    map[string]string{"meta1": "value1"},
-		Timestamp:   time.Now(),
-		CreatedBy:   "test-producer",
-		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-		Payload: map[string]interface{}{
-			"test_key": "test_value",
-			"number":   42,
-			"boolean":  true,
-		},
+// Helper function to create a test event using the validated constructor
+func createTestEvent() *models.Event {
+	event, err := models.NewEvent(
+		"test.event.created.v1",              // eventType
+		"test-service",                       // eventSource
+		"test-producer",                      // createdBy
+		uuid.New(),                           // tenantId
+		uuid.New(),                           // sessionId
+		uuid.New(),                           // requestId
+		map[string]string{"meta1": "value1"}, // metadata
+		"d41d8cd98f00b204e9800998ecf8427e",   // md5Hash
+	)
+	if err != nil {
+		panic("failed to create test event: " + err.Error())
 	}
+
+	// Set optional payload
+	event.SetPayload(map[string]interface{}{
+		"test_key": "test_value",
+		"number":   42,
+		"boolean":  true,
+	})
+
+	return event
 }
 
 // Benchmark tests
@@ -367,22 +372,24 @@ func TestCreateTestEventVariations(t *testing.T) {
 	t.Run("basic event creation", func(t *testing.T) {
 		event := createTestEvent()
 
-		assert.NotEqual(t, uuid.Nil, event.Id)
-		assert.NotEqual(t, uuid.Nil, event.SessionId)
-		assert.NotEqual(t, uuid.Nil, event.RequestId)
-		assert.NotEqual(t, uuid.Nil, event.TenantId)
-		assert.NotEmpty(t, event.EventType)
-		assert.NotEmpty(t, event.EventSource)
-		assert.NotEmpty(t, event.CreatedBy)
-		assert.NotEmpty(t, event.Md5Hash)
-		assert.NotNil(t, event.Payload)
-		assert.False(t, event.Timestamp.IsZero())
+		assert.NotEqual(t, uuid.Nil, event.Id())
+		assert.NotEqual(t, uuid.Nil, event.SessionId())
+		assert.NotEqual(t, uuid.Nil, event.RequestId())
+		assert.NotEqual(t, uuid.Nil, event.TenantId())
+		assert.NotEmpty(t, event.EventType())
+		assert.NotEmpty(t, event.EventSource())
+		assert.NotEmpty(t, event.CreatedBy())
+		assert.NotEmpty(t, event.Md5Hash())
+		assert.NotNil(t, event.Payload())
+		assert.False(t, event.Timestamp().IsZero())
 	})
 
 	t.Run("event JSON marshaling", func(t *testing.T) {
 		event := createTestEvent()
 
-		data, err := json.Marshal(event)
+		// Marshal the EventJson representation
+		eventJson := event.AsJSON()
+		data, err := json.Marshal(eventJson)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, data)
 
@@ -391,10 +398,10 @@ func TestCreateTestEventVariations(t *testing.T) {
 		assert.NoError(t, err)
 
 		// UUIDs should be equal after marshal/unmarshal
-		assert.Equal(t, event.Id, unmarshaled.Id)
-		assert.Equal(t, event.SessionId, unmarshaled.SessionId)
-		assert.Equal(t, event.EventType, unmarshaled.EventType)
-		assert.Equal(t, event.EventSource, unmarshaled.EventSource)
+		assert.Equal(t, event.Id(), unmarshaled.Id)
+		assert.Equal(t, event.SessionId(), unmarshaled.SessionId)
+		assert.Equal(t, event.EventType(), unmarshaled.EventType)
+		assert.Equal(t, event.EventSource(), unmarshaled.EventSource)
 	})
 }
 

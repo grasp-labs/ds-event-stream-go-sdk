@@ -31,10 +31,12 @@
     },
     "event_type": {
       "type": "string",
+      "minLength": 1,
       "description": "Event type."
     },
     "event_source": {
       "type": "string",
+      "minLength": 1,
       "description": "Logical source of the event."
     },
     "event_source_uri": {
@@ -80,6 +82,7 @@
     },
     "created_by": {
       "type": "string",
+      "minLength": 1,
       "description": "Identifier of the creator/producer."
     },
     "md5_hash": {

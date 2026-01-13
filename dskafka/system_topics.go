@@ -2,11 +2,9 @@
 
 package dskafka
 
-import (
-	"encoding/json"
-	"fmt"
-	"reflect"
-)
+import "encoding/json"
+import "fmt"
+import "reflect"
 
 type SystemTopicsJson string
 
