@@ -17,7 +17,63 @@ type Event struct {
 	json EventJson // unexported - cannot be set from other packages
 }
 
-// NewEvent creates a validated Event with all required fields
+// NewEvent creates a validated Event with all required fields.
+//
+// This is the only way to create a valid Event. The Event struct cannot be
+// instantiated directly from other packages due to its unexported fields.
+// All validation is performed during construction to ensure data integrity.
+//
+// Parameters:
+//   - eventType: Type identifier for the event (min length: 1). Examples: "user.created.v1", "order.shipped.v1"
+//   - eventSource: Source system or service that generated the event (min length: 1). Example: "payment-service"
+//   - createdBy: User or system that created the event (min length: 1). Example: "user@example.com", "system"
+//   - tenantId: UUID identifying the tenant/organization that owns this event
+//   - sessionId: UUID identifying the session in which this event occurred
+//   - requestId: UUID for correlating this event with a specific request or operation
+//   - metadata: Key-value pairs for additional event metadata (cannot be nil, but can be empty map)
+//   - md5Hash: MD5 hash of the event payload (must be a valid 32-character hexadecimal string)
+//
+// Validation:
+//   - eventType, eventSource, and createdBy must have minimum length of 1
+//   - metadata must not be nil (use empty map if no metadata needed)
+//   - md5Hash must match the pattern ^[A-Fa-f0-9]{32}$ (32-character hex string)
+//   - UUIDs are validated by the uuid.UUID type itself
+//
+// Returns:
+//   - *Event: A validated Event with a unique generated ID and current timestamp
+//   - error: Validation error if any parameter constraint is violated
+//
+// Errors:
+//   - "event_type cannot be empty" - when eventType is empty string
+//   - "event_source cannot be empty" - when eventSource is empty string
+//   - "created_by cannot be empty" - when createdBy is empty string
+//   - "metadata cannot be nil" - when metadata is nil
+//   - "md5_hash cannot be empty" - when md5Hash is empty string
+//   - "md5_hash must be a valid 32-character hex string" - when md5Hash format is invalid
+//
+// Example:
+//
+//	event, err := models.NewEvent(
+//	    "user.registered.v1",
+//	    "auth-service",
+//	    "system",
+//	    uuid.New(),
+//	    uuid.New(),
+//	    uuid.New(),
+//	    map[string]string{"version": "1.0", "environment": "production"},
+//	    "d41d8cd98f00b204e9800998ecf8427e",
+//	)
+//	if err != nil {
+//	    log.Fatalf("Failed to create event: %v", err)
+//	}
+//
+//	// Set optional fields using builder methods
+//	event.SetPayload(map[string]interface{}{"userId": 123, "email": "user@example.com"})
+//	event.SetMessage("User successfully registered")
+//	event.SetTags(map[string]string{"team": "auth", "priority": "high"})
+//
+// After creation, use getter methods to access field values and AsJSON() to
+// serialize for transmission. The Event remains immutable; AsJSON() returns a copy.
 func NewEvent(
 	eventType string,
 	eventSource string,
