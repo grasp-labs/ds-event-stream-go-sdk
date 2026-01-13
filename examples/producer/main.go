@@ -157,6 +157,56 @@ func main() {
 		log.Println("✅ Successfully sent event with array payload")
 	}
 
+	log.Println("Creating event with optional fields using setter methods")
+	// Create an event demonstrating all optional field setters
+	eventWithOptionalFields, err := models.NewEvent(
+		"test.complete.v1",                  // eventType
+		"TEST-PRODUCER-GO",                  // eventSource
+		"system",                            // createdBy
+		uuid.New(),                          // tenantId
+		uuid.New(),                          // sessionId
+		uuid.New(),                          // requestId
+		map[string]string{"version": "1.0"}, // metadata
+		"abcd1234567890abcd1234567890abcd",  // md5Hash
+	)
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
+	}
+
+	// Set all optional fields using setter methods
+	eventWithOptionalFields.SetMessage("This is a comprehensive event example")
+	eventWithOptionalFields.SetOwnerId("owner-12345")
+	eventWithOptionalFields.SetAffectedEntityUri("urn:example:resource:12345")
+	eventWithOptionalFields.SetEventSourceUri("https://my-service.example.com")
+	eventWithOptionalFields.SetPayloadUri("s3://my-bucket/payloads/payload-12345.json")
+	eventWithOptionalFields.SetContextUri("https://my-service.example.com/context/abc123")
+	eventWithOptionalFields.SetContext(map[string]interface{}{
+		"trace_id":      "trace-abc-123",
+		"span_id":       "span-xyz-789",
+		"retry_count":   0,
+		"execution_env": "production",
+	})
+	eventWithOptionalFields.SetPayload(map[string]interface{}{
+		"action":      "create",
+		"resource":    "document",
+		"document_id": 12345,
+		"size_bytes":  1048576,
+	})
+	eventWithOptionalFields.SetTags(map[string]string{
+		"env":        "production",
+		"region":     "us-west-2",
+		"datacenter": "dc1",
+		"team":       "platform",
+	})
+
+	log.Println("Sending event with all optional fields set")
+	err = producer.SendEvent(context.Background(), *topic, eventWithOptionalFields)
+	if err != nil {
+		log.Printf("Failed to send event with optional fields: %v", err)
+	} else {
+		log.Println("✅ Successfully sent event with all optional fields")
+	}
+
 	log.Println("Sending event with custom headers")
 	// Send with custom headers (reuse existing event)
 	headers := []dskafka.Header{
@@ -191,5 +241,5 @@ func main() {
 	producer.SafeSendEvent(context.Background(), *topic, eventForSafeSend)
 	log.Println("✅ Successfully sent event with SafeSendEvent - any errors were logged automatically")
 
-	log.Println("Done - sent 4 events total (object, array, object with headers and safe send)")
+	log.Println("Done - sent 5 events total (object, array, complete with optional fields, object with headers, and safe send)")
 }
