@@ -327,3 +327,89 @@ func TestEvent_AsJSON_ReturnsImmutableCopy(t *testing.T) {
 	assert.Equal(t, originalEventType, event.EventType())
 	assert.Equal(t, "test-service", event.EventSource())
 }
+
+func TestEvent_Metadata_ReturnsImmutableCopy(t *testing.T) {
+	// Create a valid event with metadata
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key1": "value1", "key2": "value2"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+	require.NoError(t, err)
+
+	// Get the metadata
+	metadata1 := event.Metadata()
+	assert.Equal(t, "value1", metadata1["key1"])
+	assert.Equal(t, "value2", metadata1["key2"])
+
+	// Modify the returned map
+	metadata1["key1"] = "modified"
+	metadata1["key3"] = "new_value"
+	delete(metadata1, "key2")
+
+	// Get metadata again and verify the original wasn't affected
+	metadata2 := event.Metadata()
+	assert.Equal(t, "value1", metadata2["key1"], "Original metadata should not be modified")
+	assert.Equal(t, "value2", metadata2["key2"], "Original metadata should not be modified")
+	assert.NotContains(t, metadata2, "key3", "New key should not appear in original")
+}
+
+func TestEvent_Tags_ReturnsImmutableCopy(t *testing.T) {
+	// Create a valid event
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+	require.NoError(t, err)
+
+	// Set tags
+	event.SetTags(map[string]string{"tag1": "value1", "tag2": "value2"})
+
+	// Get the tags
+	tags1 := event.Tags()
+	require.NotNil(t, tags1)
+	assert.Equal(t, "value1", (*tags1)["tag1"])
+	assert.Equal(t, "value2", (*tags1)["tag2"])
+
+	// Modify the returned map
+	(*tags1)["tag1"] = "modified"
+	(*tags1)["tag3"] = "new_value"
+	delete(*tags1, "tag2")
+
+	// Get tags again and verify the original wasn't affected
+	tags2 := event.Tags()
+	require.NotNil(t, tags2)
+	assert.Equal(t, "value1", (*tags2)["tag1"], "Original tags should not be modified")
+	assert.Equal(t, "value2", (*tags2)["tag2"], "Original tags should not be modified")
+	assert.NotContains(t, *tags2, "tag3", "New key should not appear in original")
+}
+
+func TestEvent_Tags_ReturnsNilWhenNotSet(t *testing.T) {
+	// Create a valid event without setting tags
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	)
+	require.NoError(t, err)
+
+	// Get tags - should be nil
+	tags := event.Tags()
+	assert.Nil(t, tags, "Tags should be nil when not set")
+}

@@ -208,8 +208,16 @@ func (e *Event) RequestId() uuid.UUID {
 	return e.json.RequestId
 }
 
+// Metadata returns a copy of the metadata map to prevent external modification.
 func (e *Event) Metadata() map[string]string {
-	return e.json.Metadata
+	if e.json.Metadata == nil {
+		return nil
+	}
+	copy := make(map[string]string, len(e.json.Metadata))
+	for k, v := range e.json.Metadata {
+		copy[k] = v
+	}
+	return copy
 }
 
 func (e *Event) Md5Hash() string {
@@ -252,6 +260,15 @@ func (e *Event) PayloadUri() *string {
 	return e.json.PayloadUri
 }
 
+// Tags returns a copy of the tags map to prevent external modification.
+// Returns nil if tags have not been set.
 func (e *Event) Tags() *map[string]string {
-	return e.json.Tags
+	if e.json.Tags == nil {
+		return nil
+	}
+	copy := make(map[string]string, len(*e.json.Tags))
+	for k, v := range *e.json.Tags {
+		copy[k] = v
+	}
+	return &copy
 }
