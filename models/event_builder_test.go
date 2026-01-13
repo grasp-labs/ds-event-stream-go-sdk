@@ -278,3 +278,14 @@ func TestEvent_AsJSON_RejectsBlankEvent(t *testing.T) {
 	assert.Nil(t, eventJson)
 	assert.Contains(t, err.Error(), "must be created using NewEvent()")
 }
+
+func TestEvent_AsJSON_RejectsNilEvent(t *testing.T) {
+	// Test calling AsJSON on a nil Event pointer
+	var nilEvent *Event
+
+	// AsJSON should reject it without panicking
+	eventJson, err := nilEvent.AsJSON()
+	assert.Error(t, err)
+	assert.Nil(t, eventJson)
+	assert.Contains(t, err.Error(), "event pointer is nil")
+}
