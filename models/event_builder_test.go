@@ -97,6 +97,86 @@ func TestNewEvent_NilMetadata(t *testing.T) {
 	assert.Contains(t, err.Error(), "metadata cannot be nil")
 }
 
+func TestNewEvent_EmptyMd5Hash(t *testing.T) {
+	event, err := NewEvent(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"",
+	)
+
+	assert.Error(t, err)
+	assert.Nil(t, event)
+	assert.Contains(t, err.Error(), "md5_hash cannot be empty")
+}
+
+func TestNewEvent_InvalidMd5HashFormat(t *testing.T) {
+	tests := []struct {
+		name    string
+		md5Hash string
+	}{
+		{"too short", "d41d8cd98f00b204"},
+		{"too long", "d41d8cd98f00b204e9800998ecf8427e123"},
+		{"invalid characters", "g41d8cd98f00b204e9800998ecf8427e"},
+		{"spaces", "d41d8cd9 8f00b204e9800998ecf8427e"},
+		{"special chars", "d41d8cd9-8f00-b204-e980-0998ecf8427e"},
+		{"lowercase and uppercase mixed but wrong length", "D41D8CD"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, err := NewEvent(
+				"test.event",
+				"test-service",
+				"test-user",
+				uuid.New(),
+				uuid.New(),
+				uuid.New(),
+				map[string]string{"key": "value"},
+				tt.md5Hash,
+			)
+
+			assert.Error(t, err)
+			assert.Nil(t, event)
+			assert.Contains(t, err.Error(), "md5_hash must be a valid 32-character hex string")
+		})
+	}
+}
+
+func TestNewEvent_ValidMd5HashFormats(t *testing.T) {
+	tests := []struct {
+		name    string
+		md5Hash string
+	}{
+		{"lowercase", "d41d8cd98f00b204e9800998ecf8427e"},
+		{"uppercase", "D41D8CD98F00B204E9800998ECF8427E"},
+		{"mixed case", "D41d8Cd98F00b204E9800998eCf8427e"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, err := NewEvent(
+				"test.event",
+				"test-service",
+				"test-user",
+				uuid.New(),
+				uuid.New(),
+				uuid.New(),
+				map[string]string{"key": "value"},
+				tt.md5Hash,
+			)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, event)
+			assert.Equal(t, tt.md5Hash, event.Md5Hash())
+		})
+	}
+}
+
 func TestEvent_SetOptionalFields(t *testing.T) {
 	event, err := NewEvent(
 		"test.event",

@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -39,6 +40,11 @@ func NewEvent(
 	}
 	if len(md5Hash) < 1 {
 		return nil, fmt.Errorf("md5_hash cannot be empty")
+	}
+	// Validate md5Hash matches the required pattern (32-character hex string)
+	matched, _ := regexp.MatchString("^[A-Fa-f0-9]{32}$", md5Hash)
+	if !matched {
+		return nil, fmt.Errorf("md5_hash must be a valid 32-character hex string")
 	}
 
 	return &Event{
