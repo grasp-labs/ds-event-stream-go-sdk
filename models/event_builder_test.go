@@ -140,7 +140,8 @@ func TestEvent_AsJSON_Marshaling(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get the JSON representation
-	eventJSON := event.AsJSON()
+	eventJSON, err := event.AsJSON()
+	require.NoError(t, err)
 
 	// Marshal to JSON
 	jsonBytes, err := json.Marshal(eventJSON)
@@ -185,4 +186,15 @@ func TestEvent_Getters(t *testing.T) {
 	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", event.Md5Hash())
 	assert.False(t, event.Timestamp().IsZero())
 	assert.NotEqual(t, uuid.Nil, event.Id())
+}
+
+func TestEvent_AsJSON_RejectsBlankEvent(t *testing.T) {
+	// Create a blank/zero-value Event (bypassing NewEvent)
+	var blankEvent Event
+
+	// AsJSON should reject it
+	eventJson, err := blankEvent.AsJSON()
+	assert.Error(t, err)
+	assert.Nil(t, eventJson)
+	assert.Contains(t, err.Error(), "must be created using NewEvent()")
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -184,7 +185,10 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Even
 	}
 
 	// Get the underlying EventJson for serialization
-	eventJson := evt.AsJSON()
+	eventJson, err := evt.AsJSON()
+	if err != nil {
+		return fmt.Errorf("kafka: invalid event: %w", err)
+	}
 
 	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
 	buf, err := json.Marshal(eventJson)

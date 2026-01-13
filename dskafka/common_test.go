@@ -388,7 +388,8 @@ func TestCreateTestEventVariations(t *testing.T) {
 		event := createTestEvent()
 
 		// Marshal the EventJson representation
-		eventJson := event.AsJSON()
+		eventJson, err := event.AsJSON()
+		assert.NoError(t, err)
 		data, err := json.Marshal(eventJson)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, data)

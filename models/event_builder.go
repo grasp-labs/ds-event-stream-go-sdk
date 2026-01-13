@@ -57,9 +57,16 @@ func NewEvent(
 	}, nil
 }
 
-// AsJSON returns the underlying EventJson for serialization
-func (e *Event) AsJSON() *EventJson {
-	return &e.json
+// AsJSON returns the underlying EventJson for serialization.
+// Returns an error if the Event was not properly initialized via NewEvent().
+func (e *Event) AsJSON() (*EventJson, error) {
+	// Validate that Event was properly initialized (detect zero-value Events)
+	// Check timestamp since it's only set in NewEvent() and can't be zero for valid events
+	if e.json.Timestamp.IsZero() {
+		return nil, fmt.Errorf("invalid event: event must be created using NewEvent()")
+	}
+
+	return &e.json, nil
 }
 
 // Setters for optional fields
