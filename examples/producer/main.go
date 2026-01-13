@@ -208,12 +208,27 @@ func main() {
 	}
 
 	log.Println("Sending event with custom headers")
-	// Send with custom headers (reuse existing event)
+	// Send a new event with custom headers
+	eventWithHeaders, err := models.NewEvent(
+		"test.object.v1",                    // eventType
+		"TEST-PRODUCER-GO",                  // eventSource
+		"system",                            // createdBy
+		uuid.New(),                          // tenantId
+		uuid.New(),                          // sessionId
+		uuid.New(),                          // requestId
+		map[string]string{"version": "1.0"}, // metadata
+		"abcd1234567890abcd1234567890abcd",  // md5Hash
+	)
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
+	}
+	eventWithHeaders.SetPayload(map[string]interface{}{"userId": 789, "email": "headers@example.com"})
+
 	headers := []dskafka.Header{
 		{Key: "source", Value: "my-service"},
 		{Key: "version", Value: "1.0"},
 	}
-	err = producer.SendEvent(context.Background(), *topic, eventWithObject, headers...)
+	err = producer.SendEvent(context.Background(), *topic, eventWithHeaders, headers...)
 	if err != nil {
 		log.Printf("Failed to send event with headers: %v", err)
 	} else {
