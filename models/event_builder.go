@@ -77,7 +77,9 @@ type Event struct {
 //	event.SetTags(map[string]string{"team": "auth", "priority": "high"})
 //
 // After creation, use getter methods to access field values and AsJSON() to
-// serialize for transmission. The Event remains immutable.
+// serialize for transmission. All validated required fields are immutable.
+// Note: Context and Payload fields can be modified if they contain mutable
+// data structures (maps, slices) - see SetContext() and SetPayload() documentation.
 func NewEvent(
 	eventType string,
 	eventSource string,
