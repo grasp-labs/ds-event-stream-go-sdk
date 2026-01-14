@@ -92,9 +92,9 @@ install-tools:
 generate-types:
 	@echo "Generating Go types from JSON schemas..."
 	@echo "Converting system-topics.json to Go types..."
-	@go-jsonschema --package dskafka --output dskafka/system_topics.go schemas/system-topics.json
+	@$(shell go env GOPATH)/bin/go-jsonschema --package dskafka --output dskafka/system_topics.go schemas/system-topics.json
 	@echo "Converting event.json to Go types..."
-	@go-jsonschema --package models --output models/event.go schemas/event.json
+	@$(shell go env GOPATH)/bin/go-jsonschema --package models --output models/event.go schemas/event.json
 	@echo "Go types generated successfully:"
 	@echo "  - dskafka/system_topics.go (from schemas/system-topics.json)"
 	@echo "  - models/event.go (from schemas/event.json)"

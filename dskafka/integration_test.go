@@ -42,23 +42,26 @@ func TestIntegrationSendEvent(t *testing.T) {
 	}
 	defer producer.Close()
 
-	// Create test event
-	event := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   "integration.test.v1",
-		EventSource: "integration-test",
-		Metadata:    map[string]string{"test": "integration"},
-		Timestamp:   time.Now(),
-		CreatedBy:   "integration-test",
-		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-		Payload: map[string]interface{}{
-			"test_message": "integration test",
-			"timestamp":    time.Now().Unix(),
-		},
+	// Create test event using validated constructor
+	event, err := models.NewEvent(
+		"integration.test.v1",                    // eventType
+		"integration-test",                       // eventSource
+		"integration-test",                       // createdBy
+		uuid.New(),                               // tenantId
+		uuid.New(),                               // sessionId
+		uuid.New(),                               // requestId
+		map[string]string{"test": "integration"}, // metadata
+		"d41d8cd98f00b204e9800998ecf8427e",       // md5Hash
+	)
+	if err != nil {
+		t.Fatalf("Failed to create test event: %v", err)
 	}
+
+	// Set optional payload
+	event.SetPayload(map[string]interface{}{
+		"test_message": "integration test",
+		"timestamp":    time.Now().Unix(),
+	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -106,29 +109,30 @@ func BenchmarkIntegrationSendEvent(b *testing.B) {
 	}
 	defer producer.Close()
 
-	event := models.EventJson{
-		Id:          uuid.New(),
-		SessionId:   uuid.New(),
-		RequestId:   uuid.New(),
-		TenantId:    uuid.New(),
-		EventType:   "benchmark.test.v1",
-		EventSource: "benchmark-test",
-		Metadata:    map[string]string{"bench": "test"},
-		Timestamp:   time.Now(),
-		CreatedBy:   "benchmark-test",
-		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-		Payload: map[string]interface{}{
-			"benchmark": true,
-		},
-	}
-
 	ctx := context.Background()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		// Update event ID for each iteration
-		event.Id = uuid.New()
-		err := producer.SendEvent(ctx, "benchmark-events", event)
+		// Create a new event for each iteration
+		event, err := models.NewEvent(
+			"benchmark.test.v1",                // eventType
+			"benchmark-test",                   // eventSource
+			"benchmark-test",                   // createdBy
+			uuid.New(),                         // tenantId
+			uuid.New(),                         // sessionId
+			uuid.New(),                         // requestId
+			map[string]string{"bench": "test"}, // metadata
+			"d41d8cd98f00b204e9800998ecf8427e", // md5Hash
+		)
+		if err != nil {
+			b.Fatalf("Failed to create event: %v", err)
+		}
+
+		event.SetPayload(map[string]interface{}{
+			"benchmark": true,
+		})
+
+		err = producer.SendEvent(ctx, "benchmark-events", event)
 		if err != nil {
 			b.Errorf("Failed to send event: %v", err)
 		}

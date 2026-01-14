@@ -2,8 +2,8 @@ package dskafka
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -143,8 +143,12 @@ func (p *Producer) Close() error {
 	return p.w.Close()
 }
 
-// SendEvent JSON-encodes an EventJson and sends it to the specified Kafka topic.
+// SendEvent JSON-encodes an Event and sends it to the specified Kafka topic.
 // The event is serialized to JSON with UUID fields automatically converted to strings.
+//
+// Validation:
+//   - Event is already validated at construction via NewEvent()
+//   - No additional validation is performed
 //
 // Partitioning:
 //   - Primary key: evt.Id (if not zero UUID)
@@ -163,7 +167,7 @@ func (p *Producer) Close() error {
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
 //   - topic: Target Kafka topic name
-//   - evt: Event to send (must be valid EventJson with required fields)
+//   - evt: Event to send (must be created via NewEvent())
 //   - headers: Optional custom headers to add to the message
 //
 // Returns:
@@ -171,24 +175,24 @@ func (p *Producer) Close() error {
 //
 // Example:
 //
+//	event, _ := models.NewEvent(...)
 //	err := producer.SendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
-func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) error {
+func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
 	}
 
-	// Marshal Event to JSON (uuid.UUID fields serialize as strings).
-	buf, err := json.Marshal(evt)
+	// Get the JSON bytes for the event
+	buf, err := evt.AsJSON()
 	if err != nil {
-		log.Println("kafka: error marshalling event:", err)
-		return err
+		return fmt.Errorf("kafka: invalid event: %w", err)
 	}
 
-	// Choose a stable key for partitioning.
-	key := evt.Id.String()
+	// Choose a stable key for partitioning using getter methods
+	key := evt.Id().String()
 	if key == "00000000-0000-0000-0000-000000000000" {
-		key = evt.SessionId.String()
+		key = evt.SessionId().String()
 	}
 
 	kh := make([]kafka.Header, 0, len(headers)+2)
@@ -236,7 +240,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
 //   - topic: Target Kafka topic name
-//   - evt: Event to send (must be valid EventJson with required fields)
+//   - evt: Event to send (must be created via NewEvent())
 //   - headers: Optional custom headers to add to the message
 //
 // Note: This function logs all errors using the standard log package.
@@ -244,13 +248,17 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt models.Event
 //
 // Example:
 //
+//	event, _ := models.NewEvent(...)
 //	// Fire and forget - errors are logged but not returned
 //	producer.SafeSendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
-func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt models.EventJson, headers ...Header) {
+func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) {
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
 		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
-		log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
-			evt.Id.String(), evt.EventType, evt.EventSource)
+		// Only log event details if evt is not nil to prevent panic
+		if evt != nil {
+			log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
+				evt.Id().String(), evt.EventType(), evt.EventSource())
+		}
 	}
 }

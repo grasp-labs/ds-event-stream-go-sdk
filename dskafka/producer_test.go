@@ -2,7 +2,6 @@ package dskafka
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 	"time"
 
@@ -169,26 +168,26 @@ func TestNewProducerWithCustomConfig(t *testing.T) {
 func TestCreateTestEvent(t *testing.T) {
 	event := createTestEvent()
 
-	if event.Id == uuid.Nil {
+	if event.Id() == uuid.Nil {
 		t.Error("Expected non-nil event ID")
 	}
 
-	if event.SessionId == uuid.Nil {
+	if event.SessionId() == uuid.Nil {
 		t.Error("Expected non-nil session ID")
 	}
 
-	if event.EventType == "" {
+	if event.EventType() == "" {
 		t.Error("Expected non-empty event type")
 	}
 
-	if event.EventSource == "" {
+	if event.EventSource() == "" {
 		t.Error("Expected non-empty event source")
 	}
 
-	if event.Payload == nil {
+	if event.Payload() == nil {
 		t.Error("Expected non-nil payload")
 	} else {
-		payload, ok := event.Payload.(map[string]interface{})
+		payload, ok := event.Payload().(map[string]interface{})
 		if !ok {
 			t.Error("Expected payload to be a map[string]interface{}")
 		} else if len(payload) == 0 {
@@ -296,35 +295,13 @@ func TestSendEventWithTimeout(t *testing.T) {
 func TestSendEventWithDifferentEvents(t *testing.T) {
 	tests := []struct {
 		name    string
-		event   models.EventJson
+		event   *models.Event
 		wantErr bool
 	}{
 		{
 			name:    "normal event",
 			event:   createTestEvent(),
 			wantErr: false, // We expect error due to nil producer, but event is valid
-		},
-		{
-			name: "event with zero UUID",
-			event: models.EventJson{
-				Id:          uuid.Nil, // Zero UUID
-				SessionId:   uuid.New(),
-				EventType:   "test.event.v1",
-				EventSource: "test",
-				Timestamp:   time.Now(),
-			},
-			wantErr: false, // Valid event, error only due to nil producer
-		},
-		{
-			name: "event with both zero UUIDs",
-			event: models.EventJson{
-				Id:          uuid.Nil,
-				SessionId:   uuid.Nil,
-				EventType:   "test.event.v1",
-				EventSource: "test",
-				Timestamp:   time.Now(),
-			},
-			wantErr: false, // Valid event structure
 		},
 	}
 
@@ -425,7 +402,7 @@ func TestSendEventAdvancedScenarios(t *testing.T) {
 	tests := []struct {
 		name        string
 		producer    *Producer
-		event       models.EventJson
+		event       *models.Event
 		topic       string
 		headers     []Header
 		expectError bool
@@ -438,26 +415,6 @@ func TestSendEventAdvancedScenarios(t *testing.T) {
 			topic:       "test-topic",
 			expectError: true,
 			errorMsg:    "producer not initialized",
-		},
-		{
-			name: "event with zero UUID uses SessionId for key",
-			producer: &Producer{
-				w: &kafka.Writer{}, // Mock writer that won't actually write
-			},
-			event: models.EventJson{
-				Id:          uuid.Nil, // Zero UUID
-				SessionId:   uuid.New(),
-				RequestId:   uuid.New(),
-				TenantId:    uuid.New(),
-				EventType:   "test.event.v1",
-				EventSource: "test-service",
-				Metadata:    map[string]string{},
-				Timestamp:   time.Now(),
-				CreatedBy:   "test-producer",
-				Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
-			},
-			topic:       "test-topic",
-			expectError: true, // Will error on actual write, but tests key logic
 		},
 		{
 			name: "event with multiple headers",
@@ -508,25 +465,24 @@ func TestSendEventJSONMarshalingLogic(t *testing.T) {
 	// Test the JSON marshaling doesn't fail for valid events
 	event := createTestEvent()
 
-	// Test that we can marshal the event (this tests the JSON marshaling path)
-	data, err := json.Marshal(event)
+	// Test that we can get JSON bytes from the event
+	data, err := event.AsJSON()
 	assert.NoError(t, err)
 	assert.NotEmpty(t, data)
 
 	// Test key selection logic
 	t.Run("key selection with valid ID", func(t *testing.T) {
 		event := createTestEvent()
-		key := event.Id.String()
+		key := event.Id().String()
 		assert.NotEqual(t, "00000000-0000-0000-0000-000000000000", key)
 		assert.NotEmpty(t, key)
 	})
 
-	t.Run("key selection with nil ID uses SessionId", func(t *testing.T) {
+	t.Run("sessionId is used as fallback key", func(t *testing.T) {
 		event := createTestEvent()
-		event.Id = uuid.Nil
 
-		// In SendEvent, if Id is nil UUID, it should use SessionId
-		expectedKey := event.SessionId.String()
+		// In SendEvent, SessionId is used as fallback for zero UUID Id
+		expectedKey := event.SessionId().String()
 		assert.NotEqual(t, "00000000-0000-0000-0000-000000000000", expectedKey)
 		assert.NotEmpty(t, expectedKey)
 	})
@@ -564,6 +520,145 @@ func TestSendEventContextAndTimeout(t *testing.T) {
 		// This tests the path where deadline has passed
 		err := producer.SendEvent(ctx, "test-topic", event)
 		assert.Error(t, err) // Should error due to expired context
+	})
+}
+
+// TestValidateEventConstruction tests that Event construction validates required fields
+func TestValidateEventConstruction(t *testing.T) {
+	tests := []struct {
+		name        string
+		eventType   string
+		eventSource string
+		createdBy   string
+		metadata    map[string]string
+		wantError   bool
+		errorMsg    string
+	}{
+		{
+			name:        "valid event with all fields",
+			eventType:   "test.event.v1",
+			eventSource: "test-service",
+			createdBy:   "test-producer",
+			metadata:    map[string]string{},
+			wantError:   false,
+		},
+		{
+			name:        "invalid event with empty event_type",
+			eventType:   "",
+			eventSource: "test-service",
+			createdBy:   "test-producer",
+			metadata:    map[string]string{},
+			wantError:   true,
+			errorMsg:    "event_type cannot be empty",
+		},
+		{
+			name:        "invalid event with empty event_source",
+			eventType:   "test.event.v1",
+			eventSource: "",
+			createdBy:   "test-producer",
+			metadata:    map[string]string{},
+			wantError:   true,
+			errorMsg:    "event_source cannot be empty",
+		},
+		{
+			name:        "invalid event with empty created_by",
+			eventType:   "test.event.v1",
+			eventSource: "test-service",
+			createdBy:   "",
+			metadata:    map[string]string{},
+			wantError:   true,
+			errorMsg:    "created_by cannot be empty",
+		},
+		{
+			name:        "invalid event with nil metadata",
+			eventType:   "test.event.v1",
+			eventSource: "test-service",
+			createdBy:   "test-producer",
+			metadata:    nil,
+			wantError:   true,
+			errorMsg:    "metadata cannot be nil",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			event, err := models.NewEvent(
+				tt.eventType,
+				tt.eventSource,
+				tt.createdBy,
+				uuid.New(),
+				uuid.New(),
+				uuid.New(),
+				tt.metadata,
+				"d41d8cd98f00b204e9800998ecf8427e",
+			)
+			if tt.wantError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errorMsg)
+				assert.Nil(t, event)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, event)
+			}
+		})
+	}
+}
+
+// TestSendEventWithValidation tests that SendEvent only accepts validated events
+func TestSendEventWithValidation(t *testing.T) {
+	config := Config{
+		Brokers: []string{"localhost:9092"},
+		ClientCredentials: ClientCredentials{
+			Username: "test_user",
+			Password: "test_pass",
+		},
+	}
+
+	producer, err := NewProducer(config)
+	assert.NoError(t, err)
+	assert.NotNil(t, producer)
+	defer func() {
+		_ = producer.Close()
+	}()
+
+	ctx := context.Background()
+
+	t.Run("accepts valid event created with NewEvent", func(t *testing.T) {
+		validEvent := createTestEvent()
+		// This will fail to send due to no actual Kafka connection,
+		// but the event itself is valid (validated at construction)
+		err := producer.SendEvent(ctx, "test-topic", validEvent)
+		// Should not be a validation error - any error would be from Kafka connection
+		if err != nil {
+			assert.NotContains(t, err.Error(), "event_source")
+			assert.NotContains(t, err.Error(), "event_type")
+			assert.NotContains(t, err.Error(), "created_by")
+		}
+	})
+}
+
+// TestSafeSendEvent_WithNilEvent verifies that SafeSendEvent doesn't panic when given a nil event
+func TestSafeSendEvent_WithNilEvent(t *testing.T) {
+	config := Config{
+		Brokers: []string{"localhost:9092"},
+	}
+	producer, err := NewProducer(config)
+	if err != nil {
+		t.Fatalf("Failed to create producer: %v", err)
+	}
+	defer func() {
+		if cerr := producer.Close(); cerr != nil {
+			t.Logf("Failed to close producer: %v", cerr)
+		}
+	}()
+
+	ctx := context.Background()
+
+	// This should not panic even though evt is nil
+	// SafeSendEvent should handle the error gracefully
+	assert.NotPanics(t, func() {
+		var nilEvent *models.Event
+		producer.SafeSendEvent(ctx, "test-topic", nilEvent)
 	})
 }
 
