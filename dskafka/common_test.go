@@ -96,9 +96,9 @@ func TestHeader(t *testing.T) {
 	}
 }
 
-// Helper function to create a test event using the validated constructor
+// Helper function to create a test event using the builder pattern
 func createTestEvent() *models.Event {
-	event, err := models.NewEvent(
+	event, err := models.NewEventBuilder(
 		"test.event.created.v1",              // eventType
 		"test-service",                       // eventSource
 		"test-producer",                      // createdBy
@@ -107,17 +107,15 @@ func createTestEvent() *models.Event {
 		uuid.New(),                           // requestId
 		map[string]string{"meta1": "value1"}, // metadata
 		"d41d8cd98f00b204e9800998ecf8427e",   // md5Hash
-	)
-	if err != nil {
-		panic("failed to create test event: " + err.Error())
-	}
-
-	// Set optional payload
-	event.SetPayload(map[string]interface{}{
+	).WithPayload(map[string]interface{}{
 		"test_key": "test_value",
 		"number":   42,
 		"boolean":  true,
-	})
+	}).Build()
+
+	if err != nil {
+		panic("failed to create test event: " + err.Error())
+	}
 
 	return event
 }

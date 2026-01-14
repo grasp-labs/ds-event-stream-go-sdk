@@ -101,8 +101,8 @@ func main() {
 	}()
 
 	log.Println("Creating event with object payload")
-	// Create an event with object payload using validated constructor
-	eventWithObject, err := models.NewEvent(
+	// Create an event with object payload using builder pattern
+	eventWithObject, err := models.NewEventBuilder(
 		"test.object.v1",                    // eventType
 		"TEST-PRODUCER-GO",                  // eventSource
 		"system",                            // createdBy
@@ -111,12 +111,12 @@ func main() {
 		uuid.New(),                          // requestId
 		map[string]string{"version": "1.0"}, // metadata
 		"abcd1234567890abcd1234567890abcd",  // md5Hash
-	)
+	).WithPayload(map[string]interface{}{"userId": 123, "email": "user@example.com"}).
+		Build()
+
 	if err != nil {
 		log.Fatalf("Failed to create event: %v", err)
 	}
-
-	eventWithObject.SetPayload(map[string]interface{}{"userId": 123, "email": "user@example.com"})
 
 	log.Println("Sending event with object payload")
 	err = producer.SendEvent(context.Background(), *topic, eventWithObject)
@@ -127,8 +127,8 @@ func main() {
 	}
 
 	log.Println("Creating event with array payload")
-	// Create an event with array payload using validated constructor
-	eventWithArray, err := models.NewEvent(
+	// Create an event with array payload using builder pattern
+	eventWithArray, err := models.NewEventBuilder(
 		"test.array.v1",                     // eventType
 		"TEST-PRODUCER-GO",                  // eventSource
 		"system",                            // createdBy
@@ -137,17 +137,16 @@ func main() {
 		uuid.New(),                          // requestId
 		map[string]string{"version": "1.0"}, // metadata
 		"abcd1234567890abcd1234567890abcd",  // md5Hash
-	)
-	if err != nil {
-		log.Fatalf("Failed to create event: %v", err)
-	}
-
-	eventWithArray.SetPayload([]interface{}{
+	).WithPayload([]interface{}{
 		"item1",
 		"item2",
 		map[string]interface{}{"nested": "value"},
 		42,
-	})
+	}).Build()
+
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
+	}
 
 	log.Println("Sending event with array payload")
 	err = producer.SendEvent(context.Background(), *topic, eventWithArray)
@@ -157,9 +156,9 @@ func main() {
 		log.Println("✅ Successfully sent event with array payload")
 	}
 
-	log.Println("Creating event with optional fields using setter methods")
-	// Create an event demonstrating all optional field setters
-	eventWithOptionalFields, err := models.NewEvent(
+	log.Println("Creating event with optional fields using builder pattern")
+	// Create an event demonstrating all optional fields with chaining
+	eventWithOptionalFields, err := models.NewEventBuilder(
 		"test.complete.v1",                  // eventType
 		"TEST-PRODUCER-GO",                  // eventSource
 		"system",                            // createdBy
@@ -168,36 +167,32 @@ func main() {
 		uuid.New(),                          // requestId
 		map[string]string{"version": "1.0"}, // metadata
 		"abcd1234567890abcd1234567890abcd",  // md5Hash
-	)
-	if err != nil {
-		log.Fatalf("Failed to create event: %v", err)
-	}
-
-	// Set all optional fields using setter methods
-	eventWithOptionalFields.SetMessage("This is a comprehensive event example")
-	eventWithOptionalFields.SetOwnerId("owner-12345")
-	eventWithOptionalFields.SetAffectedEntityUri("urn:example:resource:12345")
-	eventWithOptionalFields.SetEventSourceUri("https://my-service.example.com")
-	eventWithOptionalFields.SetPayloadUri("s3://my-bucket/payloads/payload-12345.json")
-	eventWithOptionalFields.SetContextUri("https://my-service.example.com/context/abc123")
-	eventWithOptionalFields.SetContext(map[string]interface{}{
-		"trace_id":      "trace-abc-123",
-		"span_id":       "span-xyz-789",
-		"retry_count":   0,
-		"execution_env": "production",
-	})
-	eventWithOptionalFields.SetPayload(map[string]interface{}{
+	).WithMessage("This is a comprehensive event example").
+		WithOwnerId("owner-12345").
+		WithAffectedEntityUri("urn:example:resource:12345").
+		WithEventSourceUri("https://my-service.example.com").
+		WithPayloadUri("s3://my-bucket/payloads/payload-12345.json").
+		WithContextUri("https://my-service.example.com/context/abc123").
+		WithContext(map[string]interface{}{
+			"trace_id":      "trace-abc-123",
+			"span_id":       "span-xyz-789",
+			"retry_count":   0,
+			"execution_env": "production",
+		}).WithPayload(map[string]interface{}{
 		"action":      "create",
 		"resource":    "document",
 		"document_id": 12345,
 		"size_bytes":  1048576,
-	})
-	eventWithOptionalFields.SetTags(map[string]string{
+	}).WithTags(map[string]string{
 		"env":        "production",
 		"region":     "us-west-2",
 		"datacenter": "dc1",
 		"team":       "platform",
-	})
+	}).Build()
+
+	if err != nil {
+		log.Fatalf("Failed to create event: %v", err)
+	}
 
 	log.Println("Sending event with all optional fields set")
 	err = producer.SendEvent(context.Background(), *topic, eventWithOptionalFields)
@@ -209,7 +204,7 @@ func main() {
 
 	log.Println("Sending event with custom headers")
 	// Send a new event with custom headers
-	eventWithHeaders, err := models.NewEvent(
+	eventWithHeaders, err := models.NewEventBuilder(
 		"test.object.v1",                    // eventType
 		"TEST-PRODUCER-GO",                  // eventSource
 		"system",                            // createdBy
@@ -218,11 +213,11 @@ func main() {
 		uuid.New(),                          // requestId
 		map[string]string{"version": "1.0"}, // metadata
 		"abcd1234567890abcd1234567890abcd",  // md5Hash
-	)
+	).WithPayload(map[string]interface{}{"userId": 789, "email": "headers@example.com"}).Build()
+
 	if err != nil {
 		log.Fatalf("Failed to create event: %v", err)
 	}
-	eventWithHeaders.SetPayload(map[string]interface{}{"userId": 789, "email": "headers@example.com"})
 
 	headers := []dskafka.Header{
 		{Key: "source", Value: "my-service"},
@@ -238,7 +233,7 @@ func main() {
 	log.Println("Testing SafeSendEvent (fire-and-forget)")
 	// Test SafeSendEvent - errors are logged but execution continues
 	// Create another event for safe send
-	eventForSafeSend, err := models.NewEvent(
+	eventForSafeSend, err := models.NewEventBuilder(
 		"test.object.v1",                    // eventType
 		"TEST-PRODUCER-GO",                  // eventSource
 		"system",                            // createdBy
@@ -247,11 +242,11 @@ func main() {
 		uuid.New(),                          // requestId
 		map[string]string{"version": "1.0"}, // metadata
 		"abcd1234567890abcd1234567890abcd",  // md5Hash
-	)
+	).WithPayload(map[string]interface{}{"userId": 456, "email": "another@example.com"}).Build()
+
 	if err != nil {
 		log.Fatalf("Failed to create event: %v", err)
 	}
-	eventForSafeSend.SetPayload(map[string]interface{}{"userId": 456, "email": "another@example.com"})
 
 	producer.SafeSendEvent(context.Background(), *topic, eventForSafeSend)
 	log.Println("✅ Successfully sent event with SafeSendEvent - any errors were logged automatically")

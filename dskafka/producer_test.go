@@ -582,7 +582,7 @@ func TestValidateEventConstruction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			event, err := models.NewEvent(
+			event, err := models.NewEventBuilder(
 				tt.eventType,
 				tt.eventSource,
 				tt.createdBy,
@@ -591,7 +591,7 @@ func TestValidateEventConstruction(t *testing.T) {
 				uuid.New(),
 				tt.metadata,
 				"d41d8cd98f00b204e9800998ecf8427e",
-			)
+			).Build()
 			if tt.wantError {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errorMsg)
@@ -623,7 +623,7 @@ func TestSendEventWithValidation(t *testing.T) {
 
 	ctx := context.Background()
 
-	t.Run("accepts valid event created with NewEvent", func(t *testing.T) {
+	t.Run("accepts valid event created with NewEventBuilder", func(t *testing.T) {
 		validEvent := createTestEvent()
 		// This will fail to send due to no actual Kafka connection,
 		// but the event itself is valid (validated at construction)

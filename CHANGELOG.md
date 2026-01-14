@@ -11,9 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Event Validation and Type Safety
 - **BREAKING**: `SendEvent()` and `SafeSendEvent()` now accept `*models.Event` instead of `models.EventJson`
-  - Events must now be created using the validated `models.NewEvent()` constructor
-  - Direct creation of `EventJson` structs is no longer supported for sending events
-  - This ensures all events are validated before being sent to Kafka
+  - Events must now be created using the `models.NewEventBuilder()` with `.Build()`
+  - Direct creation of `EventJson` structs is no longer supported for producers
+  - Consumers continue to work directly with `EventJson` when reading from Kafka
+  - This ensures all produced events are validated before being sent
 
 #### API Signature Changes
 - `Producer.SendEvent(ctx, topic, evt *models.Event, headers...)` (was: `evt models.EventJson`)
@@ -21,33 +22,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-#### New Event Validation System
-- **`models.NewEvent()`**: Validated constructor for creating events with required fields
-  - Validates: `eventType`, `eventSource`, `createdBy` (min length: 1)
-  - Validates: `tenantId`, `sessionId`, `requestId` (must not be zero-value UUIDs)
+#### New Event Builder Pattern (For Producers)
+- **`models.NewEventBuilder()`**: Fluent builder for creating validated events
+  - Validates all required fields: `eventType`, `eventSource`, `createdBy` (min length: 1)
+  - Validates UUIDs: `tenantId`, `sessionId`, `requestId` (must not be zero-value)
   - Validates: `metadata` (cannot be nil)
   - Validates: `md5Hash` (must match pattern `^[A-Fa-f0-9]{32}$`)
   - Automatically generates unique event `Id` and `Timestamp`
+  - Validation occurs in `.Build()` method
 
-#### Event Builder Pattern
-- **Setter methods** for optional fields:
-  - `SetMessage(msg string)`
-  - `SetOwnerId(ownerId string)`
-  - `SetPayload(payload interface{})`
-  - `SetAffectedEntityUri(uri string)`
-  - `SetEventSourceUri(uri string)`
-  - `SetPayloadUri(uri string)`
-  - `SetContextUri(uri string)`
-  - `SetContext(ctx interface{})`
-  - `SetTags(tags map[string]string)`
+#### Builder Methods (Fluent API)
+- **`WithMessage(msg string)`**: Set optional message
+- **`WithOwnerId(ownerId string)`**: Set optional owner ID
+- **`WithPayload(payload interface{})`**: Set event payload
+- **`WithAffectedEntityUri(uri string)`**: Set affected entity URI
+- **`WithEventSourceUri(uri string)`**: Set event source URI
+- **`WithPayloadUri(uri string)`**: Set payload URI
+- **`WithContextUri(uri string)`**: Set context URI
+- **`WithContext(ctx interface{})`**: Set processing context
+- **`WithTags(tags map[string]string)`**: Set optional tags
+- **`Build()`**: Validates and returns `*Event` or error
 
-#### Getter Methods
-- **All fields** now have getter methods on `Event`:
-  - Immutable required fields: `Id()`, `EventType()`, `EventSource()`, `CreatedBy()`, `TenantId()`, `SessionId()`, `RequestId()`, `Md5Hash()`, `Timestamp()`
-  - Optional string pointers: `Message()`, `OwnerId()`, `AffectedEntityUri()`, `EventSourceUri()`, `PayloadUri()`, `ContextUri()`
-  - Mutable interface fields (no defensive copy): `Context()`, `Payload()` - see documentation warnings
-  - Defensive copies: `Metadata()` returns a copy to prevent external modification
-  - Defensive copies: `Tags()` returns a copy to prevent external modification
+#### Event Methods
+- **`AsJSON()`**: Serialize event to JSON bytes for transmission
+- **Getters**: `Id()`, `SessionId()`, `EventType()`, `EventSource()` (used by producer for partition keys)
+- **Additional getters** for testing: `RequestId()`, `TenantId()`, `CreatedBy()`, `Md5Hash()`, `Payload()`, `Timestamp()`
+
+### Architecture
+
+#### Producer vs Consumer
+- **Producers**: Use `NewEventBuilder()` with fluent API and `.Build()` for validated event creation
+- **Consumers**: Work directly with `EventJson` when reading from Kafka (no validation needed)
+- **Event**: Lightweight wrapper around `EventJson` with minimal getters needed by producer
+
+### Migration Guide
+
+**Before (v1.x):**
+```go
+event := models.EventJson{
+    Id: uuid.New(),
+    EventType: "user.created.v1",
+    EventSource: "auth-service",
+    // ... other fields
+}
+producer.SendEvent(ctx, topic, event)
+```
+
+**After (v2.0):**
+```go
+// Using builder pattern with method chaining
+event, err := models.NewEventBuilder(
+    "user.created.v1",  // eventType
+    "auth-service",     // eventSource
+    "system",           // createdBy
+    uuid.New(),         // tenantId
+    uuid.New(),         // sessionId
+    uuid.New(),         // requestId
+    map[string]string{"version": "1.0"},  // metadata
+    "d41d8cd98f00b204e9800998ecf8427e",   // md5Hash
+).WithPayload(map[string]interface{}{"userId": 123}).
+  WithMessage("User created").
+  WithTags(map[string]string{"env": "prod"}).
+  Build()
+
+if err != nil {
+    log.Fatal(err)
+}
+
+producer.SendEvent(ctx, topic, event)
+```
+
+**Consumers (unchanged):**
+```go
+// Consumers still work with EventJson directly
+msg, err := consumer.FetchMessage(ctx)
+var event models.EventJson
+json.Unmarshal(msg.Value, &event)
+```
 
 #### Enhanced JSON Serialization
 - **`Event.AsJSON()`**: Returns `([]byte, error)` - JSON bytes ready for transmission
