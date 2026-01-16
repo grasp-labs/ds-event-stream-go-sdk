@@ -274,7 +274,7 @@ func TestEvent_AsJSON_Marshaling(t *testing.T) {
 }
 
 func TestEvent_AsJSON_RejectsNilEvent(t *testing.T) {
-	var nilEvent *Event
+	var nilEvent *SealedEvent
 
 	jsonBytes, err := nilEvent.AsJSON()
 	assert.Error(t, err)

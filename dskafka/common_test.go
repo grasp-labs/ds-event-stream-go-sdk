@@ -97,7 +97,7 @@ func TestHeader(t *testing.T) {
 }
 
 // Helper function to create a test event using the builder pattern
-func createTestEvent() *models.Event {
+func createTestEvent() *models.SealedEvent {
 	event, err := models.NewEventBuilder(
 		"test.event.created.v1",              // eventType
 		"test-service",                       // eventSource

@@ -147,7 +147,7 @@ func (p *Producer) Close() error {
 // The event is serialized to JSON with UUID fields automatically converted to strings.
 //
 // Validation:
-//   - Event is already validated at construction via NewEvent()
+//   - Event is already validated at construction via NewEventBuilder().Build()
 //   - No additional validation is performed
 //
 // Partitioning:
@@ -167,7 +167,7 @@ func (p *Producer) Close() error {
 // Parameters:
 //   - ctx: Context for cancellation and timeout control
 //   - topic: Target Kafka topic name
-//   - evt: Event to send (must be created via NewEvent())
+//   - evt: SealedEvent to send (must be created via NewEventBuilder().Build())
 //   - headers: Optional custom headers to add to the message
 //
 // Returns:
@@ -175,10 +175,10 @@ func (p *Producer) Close() error {
 //
 // Example:
 //
-//	event, _ := models.NewEvent(...)
+//	event, _ := models.NewEventBuilder(...).Build()
 //	err := producer.SendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
-func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) error {
+func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.SealedEvent, headers ...Header) error {
 	if p == nil || p.w == nil {
 		return errors.New("kafka: producer not initialized")
 	}
@@ -252,7 +252,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Even
 //	// Fire and forget - errors are logged but not returned
 //	producer.SafeSendEvent(ctx, "user-events", event,
 //	    Header{Key: "source", Value: "user-service"})
-func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt *models.Event, headers ...Header) {
+func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt *models.SealedEvent, headers ...Header) {
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
 		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
 		// Only log event details if evt is not nil to prevent panic

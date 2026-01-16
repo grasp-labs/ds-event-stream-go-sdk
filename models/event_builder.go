@@ -12,14 +12,16 @@ import (
 // md5HashPattern is a compiled regex for validating MD5 hash format (32-character hex string)
 var md5HashPattern = regexp.MustCompile("^[A-Fa-f0-9]{32}$")
 
-// Event is a validated event ready to be sent to Kafka.
-// Use NewEventBuilder() to create events for producers.
-type Event struct {
+// SealedEvent is a validated event ready to be sent to Kafka.
+// It wraps EventJson and ensures validation has occurred.
+// Use NewEventBuilder() to create sealed events for producers.
+// Consumers work directly with EventJson (no sealing needed).
+type SealedEvent struct {
 	json EventJson
 }
 
-// AsJSON returns the JSON representation of the Event as bytes.
-func (e *Event) AsJSON() ([]byte, error) {
+// AsJSON returns the JSON representation of the SealedEvent as bytes.
+func (e *SealedEvent) AsJSON() ([]byte, error) {
 	if e == nil {
 		return nil, fmt.Errorf("invalid event: event pointer is nil")
 	}
@@ -142,7 +144,7 @@ func (b *EventBuilder) WithTags(tags map[string]string) *EventBuilder {
 	return b
 }
 
-// Build validates all fields and returns a validated Event ready for sending.
+// Build validates all fields and returns a validated SealedEvent ready for sending.
 //
 // Validation rules:
 //   - eventType, eventSource, createdBy must have length >= 1
@@ -151,7 +153,7 @@ func (b *EventBuilder) WithTags(tags map[string]string) *EventBuilder {
 //   - md5Hash must match pattern ^[A-Fa-f0-9]{32}$
 //
 // Returns error if any validation fails.
-func (b *EventBuilder) Build() (*Event, error) {
+func (b *EventBuilder) Build() (*SealedEvent, error) {
 	// Validate required fields
 	if len(b.json.EventType) < 1 {
 		return nil, fmt.Errorf("event_type cannot be empty")
@@ -181,59 +183,59 @@ func (b *EventBuilder) Build() (*Event, error) {
 		return nil, fmt.Errorf("md5_hash must be a valid 32-character hex string")
 	}
 
-	return &Event{json: b.json}, nil
+	return &SealedEvent{json: b.json}, nil
 }
 
 // Minimal getters needed for producer (partition key generation)
 
 // Id returns the event ID.
-func (e *Event) Id() uuid.UUID {
+func (e *SealedEvent) Id() uuid.UUID {
 	return e.json.Id
 }
 
 // SessionId returns the session ID.
-func (e *Event) SessionId() uuid.UUID {
+func (e *SealedEvent) SessionId() uuid.UUID {
 	return e.json.SessionId
 }
 
 // EventType returns the event type.
-func (e *Event) EventType() string {
+func (e *SealedEvent) EventType() string {
 	return e.json.EventType
 }
 
 // EventSource returns the event source.
-func (e *Event) EventSource() string {
+func (e *SealedEvent) EventSource() string {
 	return e.json.EventSource
 }
 
 // Additional getters for testing purposes
 
 // RequestId returns the request ID.
-func (e *Event) RequestId() uuid.UUID {
+func (e *SealedEvent) RequestId() uuid.UUID {
 	return e.json.RequestId
 }
 
 // TenantId returns the tenant ID.
-func (e *Event) TenantId() uuid.UUID {
+func (e *SealedEvent) TenantId() uuid.UUID {
 	return e.json.TenantId
 }
 
 // CreatedBy returns the creator identifier.
-func (e *Event) CreatedBy() string {
+func (e *SealedEvent) CreatedBy() string {
 	return e.json.CreatedBy
 }
 
 // Md5Hash returns the MD5 hash.
-func (e *Event) Md5Hash() string {
+func (e *SealedEvent) Md5Hash() string {
 	return e.json.Md5Hash
 }
 
 // Payload returns the event payload.
-func (e *Event) Payload() interface{} {
+func (e *SealedEvent) Payload() interface{} {
 	return e.json.Payload
 }
 
 // Timestamp returns the event timestamp.
-func (e *Event) Timestamp() time.Time {
+func (e *SealedEvent) Timestamp() time.Time {
 	return e.json.Timestamp
 }

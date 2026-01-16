@@ -295,7 +295,7 @@ func TestSendEventWithTimeout(t *testing.T) {
 func TestSendEventWithDifferentEvents(t *testing.T) {
 	tests := []struct {
 		name    string
-		event   *models.Event
+		event   *models.SealedEvent
 		wantErr bool
 	}{
 		{
@@ -402,7 +402,7 @@ func TestSendEventAdvancedScenarios(t *testing.T) {
 	tests := []struct {
 		name        string
 		producer    *Producer
-		event       *models.Event
+		event       *models.SealedEvent
 		topic       string
 		headers     []Header
 		expectError bool
@@ -657,7 +657,7 @@ func TestSafeSendEvent_WithNilEvent(t *testing.T) {
 	// This should not panic even though evt is nil
 	// SafeSendEvent should handle the error gracefully
 	assert.NotPanics(t, func() {
-		var nilEvent *models.Event
+		var nilEvent *models.SealedEvent
 		producer.SafeSendEvent(ctx, "test-topic", nilEvent)
 	})
 }
