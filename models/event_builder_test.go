@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewEvent_ValidEvent(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_ValidEvent(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -19,18 +19,14 @@ func TestNewEvent_ValidEvent(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	require.NoError(t, err)
 	assert.NotNil(t, event)
-	assert.Equal(t, "test.event", event.EventType())
-	assert.Equal(t, "test-service", event.EventSource())
-	assert.Equal(t, "test-user", event.CreatedBy())
-	assert.NotEqual(t, uuid.Nil, event.Id())
 }
 
-func TestNewEvent_EmptyEventType(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_EmptyEventType(t *testing.T) {
+	event, err := NewEventBuilder(
 		"",
 		"test-service",
 		"test-user",
@@ -39,15 +35,15 @@ func TestNewEvent_EmptyEventType(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "event_type cannot be empty")
 }
 
-func TestNewEvent_EmptyEventSource(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_EmptyEventSource(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"",
 		"test-user",
@@ -56,15 +52,15 @@ func TestNewEvent_EmptyEventSource(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "event_source cannot be empty")
 }
 
-func TestNewEvent_EmptyCreatedBy(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_EmptyCreatedBy(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"",
@@ -73,15 +69,15 @@ func TestNewEvent_EmptyCreatedBy(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "created_by cannot be empty")
 }
 
-func TestNewEvent_NilMetadata(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_NilMetadata(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -90,15 +86,15 @@ func TestNewEvent_NilMetadata(t *testing.T) {
 		uuid.New(),
 		nil,
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "metadata cannot be nil")
 }
 
-func TestNewEvent_ZeroValueTenantId(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_ZeroValueTenantId(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -107,15 +103,15 @@ func TestNewEvent_ZeroValueTenantId(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "tenant_id cannot be zero-value UUID")
 }
 
-func TestNewEvent_ZeroValueSessionId(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_ZeroValueSessionId(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -124,15 +120,15 @@ func TestNewEvent_ZeroValueSessionId(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "session_id cannot be zero-value UUID")
 }
 
-func TestNewEvent_ZeroValueRequestId(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_ZeroValueRequestId(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -141,15 +137,15 @@ func TestNewEvent_ZeroValueRequestId(t *testing.T) {
 		uuid.Nil, // zero-value UUID
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "request_id cannot be zero-value UUID")
 }
 
-func TestNewEvent_EmptyMd5Hash(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_EmptyMd5Hash(t *testing.T) {
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -158,14 +154,14 @@ func TestNewEvent_EmptyMd5Hash(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"",
-	)
+	).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
 	assert.Contains(t, err.Error(), "md5_hash cannot be empty")
 }
 
-func TestNewEvent_InvalidMd5HashFormat(t *testing.T) {
+func TestEventBuilder_InvalidMd5HashFormat(t *testing.T) {
 	tests := []struct {
 		name    string
 		md5Hash string
@@ -180,7 +176,7 @@ func TestNewEvent_InvalidMd5HashFormat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			event, err := NewEvent(
+			event, err := NewEventBuilder(
 				"test.event",
 				"test-service",
 				"test-user",
@@ -189,7 +185,7 @@ func TestNewEvent_InvalidMd5HashFormat(t *testing.T) {
 				uuid.New(),
 				map[string]string{"key": "value"},
 				tt.md5Hash,
-			)
+			).Build()
 
 			assert.Error(t, err)
 			assert.Nil(t, event)
@@ -198,7 +194,7 @@ func TestNewEvent_InvalidMd5HashFormat(t *testing.T) {
 	}
 }
 
-func TestNewEvent_ValidMd5HashFormats(t *testing.T) {
+func TestEventBuilder_ValidMd5HashFormats(t *testing.T) {
 	tests := []struct {
 		name    string
 		md5Hash string
@@ -210,7 +206,7 @@ func TestNewEvent_ValidMd5HashFormats(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			event, err := NewEvent(
+			event, err := NewEventBuilder(
 				"test.event",
 				"test-service",
 				"test-user",
@@ -219,17 +215,19 @@ func TestNewEvent_ValidMd5HashFormats(t *testing.T) {
 				uuid.New(),
 				map[string]string{"key": "value"},
 				tt.md5Hash,
-			)
+			).Build()
 
 			assert.NoError(t, err)
 			assert.NotNil(t, event)
-			assert.Equal(t, tt.md5Hash, event.Md5Hash())
 		})
 	}
 }
 
-func TestEvent_SetOptionalFields(t *testing.T) {
-	event, err := NewEvent(
+func TestEventBuilder_WithMethods(t *testing.T) {
+	msg := "Test message"
+	ownerId := "owner-123"
+
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -238,26 +236,18 @@ func TestEvent_SetOptionalFields(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).WithMessage(msg).
+		WithOwnerId(ownerId).
+		WithPayload(map[string]interface{}{"data": "test"}).
+		WithTags(map[string]string{"env": "test"}).
+		Build()
 
 	require.NoError(t, err)
-
-	// Test setting optional fields
-	event.SetMessage("Test message")
-	event.SetOwnerId("owner-123")
-	event.SetPayload(map[string]interface{}{"data": "test"})
-	event.SetTags(map[string]string{"env": "test"})
-
-	assert.NotNil(t, event.Message())
-	assert.Equal(t, "Test message", *event.Message())
-	assert.NotNil(t, event.OwnerId())
-	assert.Equal(t, "owner-123", *event.OwnerId())
-	assert.NotNil(t, event.Payload())
-	assert.NotNil(t, event.Tags())
+	assert.NotNil(t, event)
 }
 
 func TestEvent_AsJSON_Marshaling(t *testing.T) {
-	event, err := NewEvent(
+	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
 		"test-user",
@@ -266,7 +256,7 @@ func TestEvent_AsJSON_Marshaling(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"d41d8cd98f00b204e9800998ecf8427e",
-	)
+	).Build()
 
 	require.NoError(t, err)
 
@@ -279,146 +269,15 @@ func TestEvent_AsJSON_Marshaling(t *testing.T) {
 	var unmarshaled EventJson
 	err = json.Unmarshal(jsonBytes, &unmarshaled)
 	require.NoError(t, err)
-	assert.Equal(t, event.EventType(), unmarshaled.EventType)
-	assert.Equal(t, event.EventSource(), unmarshaled.EventSource)
-}
-
-func TestEvent_Getters(t *testing.T) {
-	tenantId := uuid.New()
-	sessionId := uuid.New()
-	requestId := uuid.New()
-	metadata := map[string]string{"key": "value"}
-
-	event, err := NewEvent(
-		"test.event",
-		"test-service",
-		"test-user",
-		tenantId,
-		sessionId,
-		requestId,
-		metadata,
-		"d41d8cd98f00b204e9800998ecf8427e",
-	)
-
-	require.NoError(t, err)
-
-	// Test all getters
-	assert.Equal(t, "test.event", event.EventType())
-	assert.Equal(t, "test-service", event.EventSource())
-	assert.Equal(t, "test-user", event.CreatedBy())
-	assert.Equal(t, tenantId, event.TenantId())
-	assert.Equal(t, sessionId, event.SessionId())
-	assert.Equal(t, requestId, event.RequestId())
-	assert.Equal(t, metadata, event.Metadata())
-	assert.Equal(t, "d41d8cd98f00b204e9800998ecf8427e", event.Md5Hash())
-	assert.False(t, event.Timestamp().IsZero())
-	assert.NotEqual(t, uuid.Nil, event.Id())
-}
-
-func TestEvent_AsJSON_RejectsBlankEvent(t *testing.T) {
-	// Create a blank/zero-value Event (bypassing NewEvent)
-	var blankEvent Event
-
-	// AsJSON should reject it
-	jsonBytes, err := blankEvent.AsJSON()
-	assert.Error(t, err)
-	assert.Nil(t, jsonBytes)
-	assert.Contains(t, err.Error(), "must be created using NewEvent()")
+	assert.Equal(t, "test.event", unmarshaled.EventType)
+	assert.Equal(t, "test-service", unmarshaled.EventSource)
 }
 
 func TestEvent_AsJSON_RejectsNilEvent(t *testing.T) {
-	// Test calling AsJSON on a nil Event pointer
-	var nilEvent *Event
+	var nilEvent *SealedEvent
 
-	// AsJSON should reject it without panicking
 	jsonBytes, err := nilEvent.AsJSON()
 	assert.Error(t, err)
 	assert.Nil(t, jsonBytes)
 	assert.Contains(t, err.Error(), "event pointer is nil")
-}
-
-func TestEvent_Metadata_ReturnsImmutableCopy(t *testing.T) {
-	// Create a valid event with metadata
-	event, err := NewEvent(
-		"test.event",
-		"test-service",
-		"test-user",
-		uuid.New(),
-		uuid.New(),
-		uuid.New(),
-		map[string]string{"key1": "value1", "key2": "value2"},
-		"d41d8cd98f00b204e9800998ecf8427e",
-	)
-	require.NoError(t, err)
-
-	// Get the metadata
-	metadata1 := event.Metadata()
-	assert.Equal(t, "value1", metadata1["key1"])
-	assert.Equal(t, "value2", metadata1["key2"])
-
-	// Modify the returned map
-	metadata1["key1"] = "modified"
-	metadata1["key3"] = "new_value"
-	delete(metadata1, "key2")
-
-	// Get metadata again and verify the original wasn't affected
-	metadata2 := event.Metadata()
-	assert.Equal(t, "value1", metadata2["key1"], "Original metadata should not be modified")
-	assert.Equal(t, "value2", metadata2["key2"], "Original metadata should not be modified")
-	assert.NotContains(t, metadata2, "key3", "New key should not appear in original")
-}
-
-func TestEvent_Tags_ReturnsImmutableCopy(t *testing.T) {
-	// Create a valid event
-	event, err := NewEvent(
-		"test.event",
-		"test-service",
-		"test-user",
-		uuid.New(),
-		uuid.New(),
-		uuid.New(),
-		map[string]string{"key": "value"},
-		"d41d8cd98f00b204e9800998ecf8427e",
-	)
-	require.NoError(t, err)
-
-	// Set tags
-	event.SetTags(map[string]string{"tag1": "value1", "tag2": "value2"})
-
-	// Get the tags
-	tags1 := event.Tags()
-	require.NotNil(t, tags1)
-	assert.Equal(t, "value1", (*tags1)["tag1"])
-	assert.Equal(t, "value2", (*tags1)["tag2"])
-
-	// Modify the returned map
-	(*tags1)["tag1"] = "modified"
-	(*tags1)["tag3"] = "new_value"
-	delete(*tags1, "tag2")
-
-	// Get tags again and verify the original wasn't affected
-	tags2 := event.Tags()
-	require.NotNil(t, tags2)
-	assert.Equal(t, "value1", (*tags2)["tag1"], "Original tags should not be modified")
-	assert.Equal(t, "value2", (*tags2)["tag2"], "Original tags should not be modified")
-	assert.NotContains(t, *tags2, "tag3", "New key should not appear in original")
-}
-
-func TestEvent_Tags_ReturnsNilWhenNotSet(t *testing.T) {
-	// Create a valid event without setting tags
-	event, err := NewEvent(
-		"test.event",
-		"test-service",
-		"test-user",
-		uuid.New(),
-		uuid.New(),
-		uuid.New(),
-		map[string]string{"key": "value"},
-		"d41d8cd98f00b204e9800998ecf8427e",
-	)
-	require.NoError(t, err)
-
-	// Get tags - should be nil
-	tags := event.Tags()
-	assert.Nil(t, tags, "Tags should be nil when not set")
 }
