@@ -54,19 +54,22 @@ func main() {
     }
     defer producer.Close()
     
-    // Create an event
-    event := models.EventJson{
-        Id:          uuid.New(),
-        SessionId:   uuid.New(),
-        RequestId:   uuid.New(),
-        TenantId:    uuid.New(),
-        EventType:   "user.created.v1",
-        EventSource: "user-service",
-        CreatedBy:   "system",
-        Md5Hash:     "abcd1234567890abcd1234567890abcd",
-        Metadata:    map[string]string{"version": "1.0"},
-        Timestamp:   time.Now(),
-        Payload:     &map[string]interface{}{"userId": 123, "email": "user@example.com"},
+    // Create an event using EventBuilder (for producers)
+    event, err := models.NewEventBuilder(
+        "user.created.v1",                    // eventType
+        "user-service",                       // eventSource
+        "system",                             // createdBy
+        uuid.New(),                           // tenantId
+        uuid.New(),                           // sessionId
+        uuid.New(),                           // requestId
+        map[string]string{"version": "1.0"}, // metadata
+        "abcd1234567890abcd1234567890abcd",  // md5Hash
+    ).WithPayload(map[string]interface{}{"userId": 123, "email": "user@example.com"}).
+      WithMessage("User account created").
+      Build()
+    
+    if err != nil {
+        log.Panic("Failed to build event:", err)
     }
     
     // Send single event
@@ -225,8 +228,29 @@ config := dskafka.Config{
 ### Producer Methods
 
 - `NewProducer(config Config) (*Producer, error)` - Create a new producer
-- `SendEvent(ctx, topic, event, headers...)` - Send a single event
+- `SendEvent(ctx, topic, event *models.SealedEvent, headers...)` - Send a validated event
+- `SafeSendEvent(ctx, topic, event *models.SealedEvent, headers...)` - Send event with nil-safety
 - `Close()` - Close the producer and free resources
+
+### Event Builder (For Producers)
+
+- `NewEventBuilder(eventType, eventSource, createdBy, tenantId, sessionId, requestId, metadata, md5Hash)` - Create builder with required fields
+- `WithPayload(payload interface{})` - Set event payload
+- `WithMessage(msg string)` - Set optional message
+- `WithOwnerId(ownerId string)` - Set optional owner ID
+- `WithTags(tags map[string]string)` - Set optional tags
+- `WithContext(ctx interface{})` - Set processing context
+- `WithAffectedEntityUri(uri string)` - Set affected entity URI
+- `WithEventSourceUri(uri string)` - Set event source URI
+- `WithPayloadUri(uri string)` - Set payload URI
+- `WithContextUri(uri string)` - Set context URI
+- `Build() (*SealedEvent, error)` - Validate and create sealed event
+
+### SealedEvent (Producer Output)
+
+- `AsJSON() ([]byte, error)` - Serialize event to JSON for transmission
+- Minimal getters for internal use (Id, SessionId, EventType, EventSource)
+- Once sealed, the event is immutable and opaque
 
 ### Consumer Methods
 
@@ -236,29 +260,65 @@ config := dskafka.Config{
 
 ### Event Structure
 
-Events must follow the `models.EventJson` structure with required fields:
+#### For Producers: Use EventBuilder → SealedEvent
+
+Producers must create events using the builder pattern:
+
+```go
+event, err := models.NewEventBuilder(
+    "event.type.v1",   // eventType (required, min length: 1)
+    "my-service",      // eventSource (required, min length: 1)
+    "system",          // createdBy (required, min length: 1)
+    tenantId,          // uuid.UUID (required, non-zero)
+    sessionId,         // uuid.UUID (required, non-zero)
+    requestId,         // uuid.UUID (required, non-zero)
+    metadata,          // map[string]string (required, cannot be nil)
+    "abc123...",       // md5Hash (required, 32-char hex string)
+).WithPayload(data).  // Optional: set payload
+  WithMessage("..."). // Optional: set message
+  WithTags(tags).     // Optional: set tags
+  Build()             // Validates and returns *SealedEvent
+
+if err != nil {
+    // Handle validation error
+}
+
+// Send the sealed event
+producer.SendEvent(ctx, topic, event)
+```
+
+**SealedEvent** is validated, immutable, and opaque. Once built:
+- Cannot be modified
+- Cannot inspect optional fields (tags, message, etc.)
+- Only `AsJSON()` available for serialization
+
+#### For Consumers: EventJson
+
+Consumers work directly with `models.EventJson` when reading from Kafka:
 
 ```go
 type EventJson struct {
-    Id          uuid.UUID                  `json:"id"`          // Required
-    SessionId   uuid.UUID                  `json:"session_id"`  // Required
-    RequestId   uuid.UUID                  `json:"request_id"`  // Required
-    TenantId    uuid.UUID                  `json:"tenant_id"`   // Required
-    EventType   string                     `json:"event_type"`  // Required
-    EventSource string                     `json:"event_source"` // Required
-    CreatedBy   string                     `json:"created_by"`  // Required
-    Md5Hash     string                     `json:"md5_hash"`    // Required
-    Metadata    map[string]string          `json:"metadata"`    // Required
-    Timestamp   time.Time                  `json:"timestamp"`   // Required
+    Id          uuid.UUID                  `json:"id"`
+    SessionId   uuid.UUID                  `json:"session_id"`
+    RequestId   uuid.UUID                  `json:"request_id"`
+    TenantId    uuid.UUID                  `json:"tenant_id"`
+    EventType   string                     `json:"event_type"`
+    EventSource string                     `json:"event_source"`
+    CreatedBy   string                     `json:"created_by"`
+    Md5Hash     string                     `json:"md5_hash"`
+    Metadata    map[string]string          `json:"metadata"`
+    Timestamp   time.Time                  `json:"timestamp"`
     
     // Optional fields
-    Payload     *map[string]interface{}    `json:"payload,omitempty"`
-    Context     *map[string]interface{}    `json:"context,omitempty"`
+    Payload     *interface{}               `json:"payload,omitempty"`
+    Context     *interface{}               `json:"context,omitempty"`
     Tags        *map[string]string         `json:"tags,omitempty"`
     Message     *string                    `json:"message,omitempty"`
     // ... other optional fields
 }
 ```
+
+Consumers have full access to all fields via public struct fields.
 
 ## Development
 
