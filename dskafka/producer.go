@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-go-kit/x/log"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
@@ -85,15 +85,16 @@ func DefaultProducerConfig(clientCredentials ClientCredentials, bootstrapServers
 //	}
 //	defer producer.Close()
 func NewProducer(cfg Config) (*Producer, error) {
+	ctx := context.Background()
 	if len(cfg.Brokers) == 0 {
-		log.Println("kafka: no brokers provided")
+		log.Error(ctx, "kafka: no brokers provided")
 		return nil, errors.New("kafka: no brokers provided")
 	}
 
 	transport := &kafka.Transport{}
 	mech, mecherr := scram.Mechanism(scram.SHA512, cfg.ClientCredentials.Username, cfg.ClientCredentials.Password)
 	if mecherr != nil {
-		log.Println("kafka: error setting up SASL mechanism:", mecherr)
+		log.Error(ctx, "kafka: error setting up SASL mechanism: %v", mecherr)
 		return nil, mecherr
 	}
 	transport.SASL = mech
@@ -221,7 +222,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Seal
 	})
 
 	if werr != nil {
-		log.Println("kafka: error writing message:", werr)
+		log.Error(ctx, "kafka: error writing message: %v", werr)
 		return werr
 	}
 	return nil
@@ -254,10 +255,10 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Seal
 //	    Header{Key: "source", Value: "user-service"})
 func (p *Producer) SafeSendEvent(ctx context.Context, topic string, evt *models.SealedEvent, headers ...Header) {
 	if err := p.SendEvent(ctx, topic, evt, headers...); err != nil {
-		log.Printf("kafka: failed to send event to topic '%s': %v", topic, err)
+		log.Error(ctx, "kafka: failed to send event to topic '%s': %v", topic, err)
 		// Only log event details if evt is not nil to prevent panic
 		if evt != nil {
-			log.Printf("kafka: event details - ID: %s, Type: %s, Source: %s",
+			log.Error(ctx, "kafka: event details - ID: %s, Type: %s, Source: %s",
 				evt.Id().String(), evt.EventType(), evt.EventSource())
 		}
 	}

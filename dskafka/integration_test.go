@@ -4,13 +4,13 @@ package dskafka
 
 import (
 	"context"
-	"log"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-go-kit/x/log"
 )
 
 // TestIntegrationSendEvent tests sending events to a real Kafka instance
@@ -23,7 +23,8 @@ func TestIntegrationSendEvent(t *testing.T) {
 	}
 
 	password := os.Getenv("DS_CONSUMPTION_INGRESS_V1_PASSWORD")
-	log.Printf("Password: %s", password)
+	ctx := context.Background()
+	log.Info(ctx, "Password: %s", password)
 
 	// Setup credentials
 	credentials := ClientCredentials{
