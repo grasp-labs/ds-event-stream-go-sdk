@@ -154,11 +154,28 @@ func TestEventBuilder_EmptyMd5Hash(t *testing.T) {
 		uuid.New(),
 		map[string]string{"key": "value"},
 		"",
-	).Build()
+	).WithPayload(map[string]interface{}{"data": "test"}).Build()
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
-	assert.Contains(t, err.Error(), "md5_hash cannot be empty")
+	assert.Contains(t, err.Error(), "md5_hash cannot be empty when payload is present")
+}
+
+func TestEventBuilder_EmptyMd5HashWithoutPayload(t *testing.T) {
+	// MD5 hash should be optional when payload is nil
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"",
+	).Build()
+
+	assert.NoError(t, err)
+	assert.NotNil(t, event)
 }
 
 func TestEventBuilder_InvalidMd5HashFormat(t *testing.T) {
@@ -185,7 +202,7 @@ func TestEventBuilder_InvalidMd5HashFormat(t *testing.T) {
 				uuid.New(),
 				map[string]string{"key": "value"},
 				tt.md5Hash,
-			).Build()
+			).WithPayload(map[string]interface{}{"data": "test"}).Build()
 
 			assert.Error(t, err)
 			assert.Nil(t, event)

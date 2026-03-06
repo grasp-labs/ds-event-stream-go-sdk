@@ -176,7 +176,7 @@ func (b *EventBuilder) Build() (*SealedEvent, error) {
 	if b.json.Metadata == nil {
 		return nil, fmt.Errorf("metadata cannot be nil")
 	}
-	
+
 	// MD5 hash is only required if payload is not null
 	if b.json.Payload != nil {
 		if len(b.json.Md5Hash) < 1 {
