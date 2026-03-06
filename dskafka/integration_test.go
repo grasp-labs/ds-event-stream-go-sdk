@@ -24,7 +24,7 @@ func TestIntegrationSendEvent(t *testing.T) {
 
 	password := os.Getenv("DS_CONSUMPTION_INGRESS_V1_PASSWORD")
 	ctx := context.Background()
-	log.Info(ctx, "Password: %s", password)
+	log.Info(ctx, "Password set: %v, length: %d", password != "", len(password))
 
 	// Setup credentials
 	credentials := ClientCredentials{
