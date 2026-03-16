@@ -158,7 +158,7 @@ func TestEventBuilder_EmptyMd5Hash(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, event)
-	assert.Contains(t, err.Error(), "md5_hash cannot be empty when payload is present")
+	assert.Contains(t, err.Error(), "md5_hash must be a valid 32-character hex string")
 }
 
 func TestEventBuilder_EmptyMd5HashWithoutPayload(t *testing.T) {
@@ -238,6 +238,28 @@ func TestEventBuilder_ValidMd5HashFormats(t *testing.T) {
 			assert.NotNil(t, event)
 		})
 	}
+}
+
+func TestEventBuilder_ValidMd5HashWithPayload(t *testing.T) {
+	// Test that a valid MD5 hash with a payload passes validation
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"5d41402abc4b2a76b9719d911017c592", // MD5 hash of "hello"
+	).WithPayload(map[string]interface{}{"data": "test"}).Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	// Verify the event can be marshaled to JSON
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+	assert.NotEmpty(t, jsonBytes)
 }
 
 func TestEventBuilder_WithMethods(t *testing.T) {

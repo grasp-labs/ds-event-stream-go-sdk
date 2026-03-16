@@ -179,9 +179,6 @@ func (b *EventBuilder) Build() (*SealedEvent, error) {
 
 	// MD5 hash is only required if payload is not null
 	if b.json.Payload != nil {
-		if len(b.json.Md5Hash) < 1 {
-			return nil, fmt.Errorf("md5_hash cannot be empty when payload is present")
-		}
 		if !md5HashPattern.MatchString(b.json.Md5Hash) {
 			return nil, fmt.Errorf("md5_hash must be a valid 32-character hex string")
 		}
