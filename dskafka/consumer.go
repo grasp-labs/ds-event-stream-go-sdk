@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"time"
 
 	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-go-kit/x/log"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
@@ -87,8 +87,9 @@ func DefaultConsumerConfig(clientCredentials ClientCredentials, bootstrapServers
 //	}
 //	defer consumer.Close()
 func NewConsumer(cfg Config) (*Consumer, error) {
+	ctx := context.Background()
 	if len(cfg.Brokers) == 0 {
-		log.Println("kafka: no brokers provided")
+		log.Error(ctx, "kafka: no brokers provided")
 		return nil, errors.New("kafka: no brokers provided")
 	}
 
@@ -121,10 +122,11 @@ func (c *Consumer) Close() error {
 		return nil
 	}
 
+	ctx := context.Background()
 	var lastErr error
 	for _, reader := range c.readers {
 		if err := reader.Close(); err != nil {
-			log.Println("kafka: error closing reader:", err)
+			log.Error(ctx, "kafka: error closing reader: %v", err)
 			lastErr = err
 		}
 	}
@@ -204,9 +206,10 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 	// Only set offset manually when NOT using consumer groups
 	// Consumer groups manage their own offsets automatically
 	if groupID == "" && c.config.Partition < 0 {
+		ctx := context.Background()
 		// Set manual offset for non-group consumers based on configuration
 		if err := reader.SetOffset(c.config.StartOffset); err != nil {
-			log.Println("kafka: error setting offset:", err)
+			log.Error(ctx, "kafka: error setting offset: %v", err)
 			if errClose := reader.Close(); errClose != nil {
 				return nil, errors.Join(err, errClose)
 			}
@@ -252,11 +255,11 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 //	}
 func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...string) (*models.EventJson, error) {
 	if c == nil {
-		log.Println("kafka: consumer not initialized")
+		log.Error(ctx, "kafka: consumer not initialized")
 		return nil, errors.New("kafka: consumer not initialized")
 	}
 	if topic == "" {
-		log.Println("kafka: topic is required")
+		log.Error(ctx, "kafka: topic is required")
 		return nil, errors.New("kafka: topic is required")
 	}
 
@@ -269,7 +272,7 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 
 	reader, err := c.getOrCreateReader(topic, gid)
 	if err != nil {
-		log.Println("kafka: error getting reader:", err)
+		log.Error(ctx, "kafka: error getting reader: %v", err)
 		return nil, err
 	}
 
@@ -282,13 +285,13 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 
 	msg, err := reader.ReadMessage(readCtx)
 	if err != nil {
-		log.Println("kafka: error reading message:", err)
+		log.Error(ctx, "kafka: error reading message: %v", err)
 		return nil, err
 	}
 
 	var event models.EventJson
 	if err := json.Unmarshal(msg.Value, &event); err != nil {
-		log.Println("kafka: failed to unmarshal event:", err)
+		log.Error(ctx, "kafka: failed to unmarshal event: %v", err)
 		return nil, errors.New("kafka: failed to unmarshal event - " + err.Error())
 	}
 
@@ -326,11 +329,11 @@ func (c *Consumer) ReadEvent(ctx context.Context, topic string, groupID ...strin
 //	err = consumer.CommitEvents(ctx, "user-events", msg)
 func (c *Consumer) ReadEventWithMessage(ctx context.Context, topic string, groupID ...string) (*models.EventJson, kafka.Message, error) {
 	if c == nil {
-		log.Println("kafka: consumer not initialized")
+		log.Error(ctx, "kafka: consumer not initialized")
 		return nil, kafka.Message{}, errors.New("kafka: consumer not initialized")
 	}
 	if topic == "" {
-		log.Println("kafka: topic is required")
+		log.Error(ctx, "kafka: topic is required")
 		return nil, kafka.Message{}, errors.New("kafka: topic is required")
 	}
 
@@ -343,7 +346,7 @@ func (c *Consumer) ReadEventWithMessage(ctx context.Context, topic string, group
 
 	reader, err := c.getOrCreateReader(topic, gid)
 	if err != nil {
-		log.Println("kafka: error getting reader:", err)
+		log.Error(ctx, "kafka: error getting reader: %v", err)
 		return nil, kafka.Message{}, err
 	}
 
@@ -356,13 +359,13 @@ func (c *Consumer) ReadEventWithMessage(ctx context.Context, topic string, group
 
 	msg, err := reader.ReadMessage(readCtx)
 	if err != nil {
-		log.Println("kafka: error reading message:", err)
+		log.Error(ctx, "kafka: error reading message: %v", err)
 		return nil, kafka.Message{}, err
 	}
 
 	var event models.EventJson
 	if err := json.Unmarshal(msg.Value, &event); err != nil {
-		log.Println("kafka: failed to unmarshal event:", err)
+		log.Error(ctx, "kafka: failed to unmarshal event: %v", err)
 		return nil, kafka.Message{}, errors.New("kafka: failed to unmarshal event - " + err.Error())
 	}
 
