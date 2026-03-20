@@ -231,7 +231,7 @@ config := dskafka.Config{
 - `SendEvent(ctx, topic, event *models.SealedEvent, headers...)` - Send a single validated event
 - `Close()` - Close the producer and free resources
 
-**Note:** Producers must use `*models.SealedEvent` created via `models.NewEventBuilder().Build()`. This ensures all events are validated before sending.
+**Note:** Producers must use `*models.SealedEvent` created via `models.NewEventBuilder(eventType, eventSource, createdBy, tenantId, sessionId, requestId, metadata, md5Hash).Build()`. This ensures all events are validated before sending. See the [Quick Start](#creating-a-producer) section for a complete example.
 
 ### Consumer Methods
 
