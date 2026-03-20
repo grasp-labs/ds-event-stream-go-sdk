@@ -702,3 +702,129 @@ func BenchmarkUUIDGeneration(b *testing.B) {
 		_ = uuid.New()
 	}
 }
+
+func TestEventJson_UnmarshalJSON_Md5HashOptionalWithoutPayload(t *testing.T) {
+	// Test that md5_hash is optional when payload is nil
+	tests := []struct {
+		name      string
+		jsonInput string
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name: "no payload, no md5_hash - should succeed",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "no payload, empty md5_hash - should succeed",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "with payload, no md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "md5_hash is required when payload is present",
+		},
+		{
+			name: "with payload, empty md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "md5_hash is required when payload is present",
+		},
+		{
+			name: "with payload, valid md5_hash - should succeed",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "5d41402abc4b2a76b9719d911017c592",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "with payload, invalid md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "invalid",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "pattern match",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var event EventJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &event)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

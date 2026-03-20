@@ -89,9 +89,6 @@ func (j *EventJson) UnmarshalJSON(value []byte) error {
 	if _, ok := raw["id"]; raw != nil && !ok {
 		return fmt.Errorf("field id in EventJson: required")
 	}
-	if _, ok := raw["md5_hash"]; raw != nil && !ok {
-		return fmt.Errorf("field md5_hash in EventJson: required")
-	}
 	if _, ok := raw["metadata"]; raw != nil && !ok {
 		return fmt.Errorf("field metadata in EventJson: required")
 	}
@@ -121,8 +118,14 @@ func (j *EventJson) UnmarshalJSON(value []byte) error {
 	if len(plain.EventType) < 1 {
 		return fmt.Errorf("field %s length: must be >= %d", "event_type", 1)
 	}
-	if matched, _ := regexp.MatchString(`^[A-Fa-f0-9]{32}$`, string(plain.Md5Hash)); !matched {
-		return fmt.Errorf("field %s pattern match: must match %s", "md5_hash", `^[A-Fa-f0-9]{32}$`)
+	// MD5 hash is only required and validated when payload is present
+	if plain.Payload != nil {
+		if len(plain.Md5Hash) == 0 {
+			return fmt.Errorf("field md5_hash is required when payload is present")
+		}
+		if matched, _ := regexp.MatchString(`^[A-Fa-f0-9]{32}$`, string(plain.Md5Hash)); !matched {
+			return fmt.Errorf("field %s pattern match: must match %s", "md5_hash", `^[A-Fa-f0-9]{32}$`)
+		}
 	}
 	*j = EventJson(plain)
 	return nil
