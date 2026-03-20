@@ -8,8 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/google/uuid"
-	"github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
-	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/v2/dskafka"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/v2/models"
 	"github.com/grasp-labs/ds-go-kit/x/log"
 )
 

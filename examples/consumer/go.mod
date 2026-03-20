@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.18
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.0
-	github.com/grasp-labs/ds-event-stream-go-sdk v0.0.0
+	github.com/grasp-labs/ds-event-stream-go-sdk/v2 v2.0.0
 	github.com/segmentio/kafka-go v0.4.49
 )
 
@@ -31,4 +31,4 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 )
 
-replace github.com/grasp-labs/ds-event-stream-go-sdk => ../..
+replace github.com/grasp-labs/ds-event-stream-go-sdk/v2 => ../..

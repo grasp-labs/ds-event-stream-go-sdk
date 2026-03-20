@@ -14,7 +14,7 @@ This SDK provides strongly-typed Kafka producer and consumer classes for communi
 ## Installation
 
 ```bash
-go get github.com/grasp-labs/ds-event-stream-go-sdk
+go get github.com/grasp-labs/ds-event-stream-go-sdk/v2
 ```
 
 ## Quick Start
@@ -30,8 +30,8 @@ import (
     "time"
 
     "github.com/google/uuid"
-    "github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
-    "github.com/grasp-labs/ds-event-stream-go-sdk/models"
+    "github.com/grasp-labs/ds-event-stream-go-sdk/v2/dskafka"
+    "github.com/grasp-labs/ds-event-stream-go-sdk/v2/models"
 )
 
 func main() {
@@ -96,7 +96,7 @@ import (
     "context"
     "log"
 
-    "github.com/grasp-labs/ds-event-stream-go-sdk/dskafka"
+    "github.com/grasp-labs/ds-event-stream-go-sdk/v2/dskafka"
 )
 
 func main() {

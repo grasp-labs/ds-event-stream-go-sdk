@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-03-20
+
+### Fixed
+- Module path updated to include `/v2` suffix for proper Go module v2+ semantics
+- All internal imports updated to use `github.com/grasp-labs/ds-event-stream-go-sdk/v2`
+- Examples and documentation updated with correct import paths
+
 ## [2.1.0] - 2026-03-16
 
 ### Added

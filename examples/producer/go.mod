@@ -6,7 +6,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.18
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.0
 	github.com/google/uuid v1.6.0
-	github.com/grasp-labs/ds-event-stream-go-sdk v0.0.0
+	github.com/grasp-labs/ds-event-stream-go-sdk/v2 v2.0.0
 )
 
 require (
@@ -31,4 +31,4 @@ require (
 	golang.org/x/text v0.23.0 // indirect
 )
 
-replace github.com/grasp-labs/ds-event-stream-go-sdk => ../..
+replace github.com/grasp-labs/ds-event-stream-go-sdk/v2 => ../..
