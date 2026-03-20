@@ -812,6 +812,23 @@ func TestEventJson_UnmarshalJSON_Md5HashOptionalWithoutPayload(t *testing.T) {
 			wantErr: true,
 			errMsg:  "pattern match",
 		},
+		{
+			name: "no payload, invalid md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "invalid123",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: true,
+			errMsg:  "pattern match",
+		},
 	}
 
 	for _, tt := range tests {
