@@ -1,12 +1,13 @@
 module consumer-example
 
-go 1.23.0
+go 1.25.0
 
 require (
 	github.com/aws/aws-sdk-go-v2/config v1.31.18
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.67.0
-	github.com/grasp-labs/ds-event-stream-go-sdk/v2 v2.0.0
-	github.com/segmentio/kafka-go v0.4.49
+	github.com/grasp-labs/ds-event-stream-go-sdk/v2 v2.1.1
+	github.com/grasp-labs/ds-go-kit v1.1.0
+	github.com/segmentio/kafka-go v0.4.50
 )
 
 require (
@@ -23,12 +24,19 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sts v1.40.0 // indirect
 	github.com/aws/smithy-go v1.23.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.15.9 // indirect
-	github.com/pierrec/lz4/v4 v4.1.15 // indirect
+	github.com/grasp-labs/ds-go-echo-middleware/v2 v2.0.0 // indirect
+	github.com/klauspost/compress v1.18.3 // indirect
+	github.com/labstack/gommon v0.4.2 // indirect
+	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/pierrec/lz4/v4 v4.1.25 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
-	github.com/xdg-go/scram v1.1.2 // indirect
+	github.com/xdg-go/scram v1.2.0 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 )
 
 replace github.com/grasp-labs/ds-event-stream-go-sdk/v2 => ../..
