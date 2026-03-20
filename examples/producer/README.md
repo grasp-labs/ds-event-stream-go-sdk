@@ -172,8 +172,8 @@ When using `-use-ssm`, the application:
 ## Dependencies
 
 This example has its own `go.mod` file with the following dependencies:
-- Go 1.23+
-- github.com/grasp-labs/ds-event-stream-go-sdk (via replace directive to main module)
+- Go 1.25+
+- github.com/grasp-labs/ds-event-stream-go-sdk/v2 (via replace directive to main module)
 - github.com/google/uuid
 - github.com/aws/aws-sdk-go-v2/config (for SSM functionality)
 - github.com/aws/aws-sdk-go-v2/service/ssm (for SSM functionality)
@@ -189,7 +189,7 @@ This example uses its own Go module (`producer-example`) with a replace directiv
 ```go.mod
 module producer-example
 
-replace github.com/grasp-labs/ds-event-stream-go-sdk => ../..
+replace github.com/grasp-labs/ds-event-stream-go-sdk/v2 => ../..
 ```
 
 This allows the example to have AWS dependencies while keeping the main SDK clean and focused.
