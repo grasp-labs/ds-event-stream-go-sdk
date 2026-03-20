@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Module path updated to include `/v2` suffix for proper Go module v2+ semantics
 - All internal imports updated to use `github.com/grasp-labs/ds-event-stream-go-sdk/v2`
 - Examples and documentation updated with correct import paths
+- `EventJson.UnmarshalJSON` now correctly makes `md5_hash` optional when payload is absent (aligns with EventBuilder validation)
+
+### Changed
+- Example modules updated to require Go 1.25.0 (matching main SDK)
+- README updated to use EventBuilder/SealedEvent pattern for producer examples
 
 ## [2.1.0] - 2026-03-16
 
