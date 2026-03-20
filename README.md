@@ -1,6 +1,6 @@
 # ds-event-stream-go-sdk
 ![Build](https://github.com/grasp-labs/ds-event-stream-go-sdk/actions/workflows/ci.yml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/grasp-labs/ds-event-stream-go-sdk)](https://goreportcard.com/report/github.com/grasp-labs/ds-event-stream-go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/grasp-labs/ds-event-stream-go-sdk/v2)](https://goreportcard.com/report/github.com/grasp-labs/ds-event-stream-go-sdk/v2)
 [![codecov](https://codecov.io/gh/grasp-labs/ds-event-stream-go-sdk/branch/main/graph/badge.svg)](https://codecov.io/gh/grasp-labs/ds-event-stream-go-sdk)
 [![Latest tag](https://img.shields.io/github/v/tag/grasp-labs/ds-event-stream-go-sdk?sort=semver)](https://github.com/grasp-labs/ds-event-stream-go-sdk/tags)
 ![License](https://img.shields.io/github/license/grasp-labs/ds-event-stream-go-sdk?cacheSeconds=60)
@@ -318,6 +318,6 @@ make generate-types
 
 ## Requirements
 
-- Go 1.23+
+- Go 1.25+
 - Access to DS Kafka environment
 - Valid Kafka credentials
