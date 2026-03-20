@@ -87,7 +87,7 @@
     },
     "md5_hash": {
       "type": "string",
-      "description": "MD5 hash of the canonical event representation.",
+      "description": "MD5 hash of the canonical event representation. Required only when payload is present.",
       "pattern": "^[A-Fa-f0-9]{32}$"
     },
     "context": {
@@ -108,8 +108,7 @@
     "event_source",
     "metadata",
     "timestamp",
-    "created_by",
-    "md5_hash"
+    "created_by"
   ],
   "examples": [
     {
