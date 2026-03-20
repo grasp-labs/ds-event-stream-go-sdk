@@ -27,7 +27,6 @@ package main
 import (
     "context"
     "log"
-    "time"
 
     "github.com/google/uuid"
     "github.com/grasp-labs/ds-event-stream-go-sdk/v2/dskafka"
@@ -54,19 +53,23 @@ func main() {
     }
     defer producer.Close()
     
-    // Create an event
-    event := models.EventJson{
-        Id:          uuid.New(),
-        SessionId:   uuid.New(),
-        RequestId:   uuid.New(),
-        TenantId:    uuid.New(),
-        EventType:   "user.created.v1",
-        EventSource: "user-service",
-        CreatedBy:   "system",
-        Md5Hash:     "abcd1234567890abcd1234567890abcd",
-        Metadata:    map[string]string{"version": "1.0"},
-        Timestamp:   time.Now(),
-        Payload:     &map[string]interface{}{"userId": 123, "email": "user@example.com"},
+    // Create an event using the builder pattern (required for producers)
+    event, err := models.NewEventBuilder(
+        "user.created.v1",                                // eventType
+        "user-service",                                   // eventSource
+        "system",                                         // createdBy
+        uuid.New(),                                       // tenantId
+        uuid.New(),                                       // sessionId
+        uuid.New(),                                       // requestId
+        map[string]string{"version": "1.0"},            // metadata
+        "5d41402abc4b2a76b9719d911017c592",             // md5Hash (MD5 of payload)
+    ).WithPayload(map[string]interface{}{
+        "userId": 123,
+        "email":  "user@example.com",
+    }).WithMessage("User account created").Build()
+    
+    if err != nil {
+        log.Panic("Failed to build event:", err)
     }
     
     // Send single event
@@ -225,8 +228,10 @@ config := dskafka.Config{
 ### Producer Methods
 
 - `NewProducer(config Config) (*Producer, error)` - Create a new producer
-- `SendEvent(ctx, topic, event, headers...)` - Send a single event
+- `SendEvent(ctx, topic, event *models.SealedEvent, headers...)` - Send a single validated event
 - `Close()` - Close the producer and free resources
+
+**Note:** Producers must use `*models.SealedEvent` created via `models.NewEventBuilder().Build()`. This ensures all events are validated before sending.
 
 ### Consumer Methods
 
@@ -236,27 +241,46 @@ config := dskafka.Config{
 
 ### Event Structure
 
-Events must follow the `models.EventJson` structure with required fields:
+#### For Producers: Use EventBuilder
+
+Producers must create validated events using the builder pattern:
+
+```go
+event, err := models.NewEventBuilder(
+    eventType,      // string (min length: 1)
+    eventSource,    // string (min length: 1)
+    createdBy,      // string (min length: 1)
+    tenantId,       // uuid.UUID (non-zero)
+    sessionId,      // uuid.UUID (non-zero)
+    requestId,      // uuid.UUID (non-zero)
+    metadata,       // map[string]string (non-nil)
+    md5Hash,        // string (32-char hex, required if payload is set)
+).WithPayload(payload).        // optional
+  WithMessage("msg").          // optional
+  WithTags(tags).              // optional
+  Build()
+```
+
+#### For Consumers: EventJson Structure
+
+Consumers receive `models.EventJson` directly from Kafka:
 
 ```go
 type EventJson struct {
-    Id          uuid.UUID                  `json:"id"`          // Required
-    SessionId   uuid.UUID                  `json:"session_id"`  // Required
-    RequestId   uuid.UUID                  `json:"request_id"`  // Required
-    TenantId    uuid.UUID                  `json:"tenant_id"`   // Required
-    EventType   string                     `json:"event_type"`  // Required
-    EventSource string                     `json:"event_source"` // Required
-    CreatedBy   string                     `json:"created_by"`  // Required
-    Md5Hash     string                     `json:"md5_hash"`    // Required
-    Metadata    map[string]string          `json:"metadata"`    // Required
-    Timestamp   time.Time                  `json:"timestamp"`   // Required
-    
-    // Optional fields
-    Payload     *map[string]interface{}    `json:"payload,omitempty"`
-    Context     *map[string]interface{}    `json:"context,omitempty"`
-    Tags        *map[string]string         `json:"tags,omitempty"`
+    Id          uuid.UUID                  `json:"id"`
+    SessionId   uuid.UUID                  `json:"session_id"`
+    RequestId   uuid.UUID                  `json:"request_id"`
+    TenantId    uuid.UUID                  `json:"tenant_id"`
+    EventType   string                     `json:"event_type"`
+    EventSource string                     `json:"event_source"`
+    CreatedBy   string                     `json:"created_by"`
+    Md5Hash     string                     `json:"md5_hash"`
+    Metadata    map[string]string          `json:"metadata"`
+    Timestamp   time.Time                  `json:"timestamp"`
+    Payload     interface{}                `json:"payload,omitempty"`
     Message     *string                    `json:"message,omitempty"`
-    // ... other optional fields
+    Tags        *map[string]string         `json:"tags,omitempty"`
+    // ... other fields
 }
 ```
 
