@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples and documentation updated with correct import paths
 - `md5_hash` is now optional when payload is absent:
   - Updated JSON schemas (event.json, event.yaml) to remove `md5_hash` from required fields
+  - Added JSON Schema Draft 2020-12 conditional validation: `md5_hash` required when `payload` is present
   - `EventJson.UnmarshalJSON` validates `md5_hash` format when provided, requires it only when payload is present
   - Aligns with EventBuilder validation logic used by producers
 

@@ -110,6 +110,17 @@
     "timestamp",
     "created_by"
   ],
+  "if": {
+    "required": ["payload"],
+    "properties": {
+      "payload": {
+        "not": { "type": "null" }
+      }
+    }
+  },
+  "then": {
+    "required": ["md5_hash"]
+  },
   "examples": [
     {
       "id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
