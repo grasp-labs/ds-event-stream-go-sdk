@@ -11,6 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// strPtr is a helper function to create a string pointer
+func strPtr(s string) *string {
+	return &s
+}
+
 func TestEventSerialization(t *testing.T) {
 	// Create a test event with all required fields
 	eventID := uuid.New()
@@ -32,7 +37,7 @@ func TestEventSerialization(t *testing.T) {
 		Metadata:    map[string]string{"meta1": "value1"},
 		Timestamp:   time.Now(),
 		CreatedBy:   createdBy,
-		Md5Hash:     md5Hash,
+		Md5Hash:     strPtr(md5Hash),
 		Payload: map[string]interface{}{
 			"key1": "value1",
 			"key2": 42,
@@ -117,7 +122,7 @@ func TestEventWithOptionalFields(t *testing.T) {
 		Metadata:       map[string]string{"meta1": "value1"},
 		Timestamp:      time.Now(),
 		CreatedBy:      createdBy,
-		Md5Hash:        md5Hash,
+		Md5Hash:        strPtr(md5Hash),
 	}
 
 	// Test JSON marshaling with optional fields
@@ -165,7 +170,7 @@ func TestEventJSONFormat(t *testing.T) {
 		Metadata:    map[string]string{"meta1": "value1"},
 		Timestamp:   time.Now(),
 		CreatedBy:   createdBy,
-		Md5Hash:     md5Hash,
+		Md5Hash:     strPtr(md5Hash),
 		Payload: map[string]interface{}{
 			"test": "data",
 		},
@@ -201,7 +206,7 @@ func TestEmptyEvent(t *testing.T) {
 		Metadata:    map[string]string{},
 		Timestamp:   time.Now(),
 		CreatedBy:   "test",
-		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e", // Valid MD5 hash
+		Md5Hash:     strPtr("d41d8cd98f00b204e9800998ecf8427e"), // Valid MD5 hash
 	}
 
 	// Should be able to marshal the event
@@ -262,7 +267,7 @@ func TestEventJsonValidation(t *testing.T) {
 				Metadata:    map[string]string{"key": "value"},
 				Timestamp:   time.Now(),
 				CreatedBy:   "test-producer",
-				Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+				Md5Hash:     strPtr("d41d8cd98f00b204e9800998ecf8427e"),
 				Payload:     &map[string]interface{}{"data": "test"},
 			},
 			wantErr: false,
@@ -278,8 +283,8 @@ func TestEventJsonValidation(t *testing.T) {
 				EventSource: "minimal-service",
 				Metadata:    map[string]string{}, // Required field
 				Timestamp:   time.Now(),
-				CreatedBy:   "minimal-producer", // Required field
-				Md5Hash:     validMd5Hash,       // Required with pattern
+				CreatedBy:   "minimal-producer",   // Required field
+				Md5Hash:     strPtr(validMd5Hash), // Required with pattern
 			},
 			wantErr: false,
 		},
@@ -294,8 +299,8 @@ func TestEventJsonValidation(t *testing.T) {
 				EventSource: "zero-service",
 				Metadata:    map[string]string{}, // Required field
 				Timestamp:   time.Now(),
-				CreatedBy:   "zero-producer", // Required field
-				Md5Hash:     validMd5Hash,    // Required with pattern
+				CreatedBy:   "zero-producer",      // Required field
+				Md5Hash:     strPtr(validMd5Hash), // Required with pattern
 			},
 			wantErr: false, // Zero UUIDs are valid in Go
 		},
@@ -355,8 +360,8 @@ func TestUUIDSerialization(t *testing.T) {
 				EventSource: "uuid-service",
 				Metadata:    map[string]string{}, // Required
 				Timestamp:   time.Now(),
-				CreatedBy:   "uuid-producer", // Required
-				Md5Hash:     validMd5Hash,    // Required with pattern
+				CreatedBy:   "uuid-producer",      // Required
+				Md5Hash:     strPtr(validMd5Hash), // Required with pattern
 			}
 
 			data, err := json.Marshal(event)
@@ -437,7 +442,7 @@ func TestPayloadHandling(t *testing.T) {
 				Metadata:    map[string]string{},
 				Timestamp:   time.Now(),
 				CreatedBy:   "payload-producer",
-				Md5Hash:     validMd5Hash,
+				Md5Hash:     strPtr(validMd5Hash),
 				Payload:     tt.payload,
 			}
 
@@ -505,7 +510,7 @@ func TestMetadataHandling(t *testing.T) {
 				EventSource: "metadata-service",
 				Timestamp:   time.Now(),
 				CreatedBy:   "metadata-producer",
-				Md5Hash:     validMd5Hash,
+				Md5Hash:     strPtr(validMd5Hash),
 				Metadata:    tt.metadata,
 			}
 
@@ -567,7 +572,7 @@ func TestTimestampHandling(t *testing.T) {
 				EventSource: "timestamp-service",
 				Metadata:    map[string]string{},
 				CreatedBy:   "timestamp-producer",
-				Md5Hash:     validMd5Hash,
+				Md5Hash:     strPtr(validMd5Hash),
 				Timestamp:   tt.timestamp,
 			}
 
@@ -606,7 +611,7 @@ func TestEventEdgeCases(t *testing.T) {
 			EventSource: longString,
 			Metadata:    map[string]string{},
 			CreatedBy:   longString,
-			Md5Hash:     validMd5Hash, // Using valid hash instead of long string
+			Md5Hash:     strPtr(validMd5Hash), // Using valid hash instead of long string
 			Timestamp:   time.Now(),
 		}
 
@@ -629,7 +634,7 @@ func TestEventEdgeCases(t *testing.T) {
 			EventType:   "测试.事件.创建.v1",
 			EventSource: "测试服务",
 			CreatedBy:   "测试用户",
-			Md5Hash:     validMd5Hash,
+			Md5Hash:     strPtr(validMd5Hash),
 			Timestamp:   time.Now(),
 			Metadata: map[string]string{
 				"描述": "这是一个测试事件",
@@ -662,7 +667,7 @@ func BenchmarkEventMarshaling(b *testing.B) {
 		Metadata:    map[string]string{"key": "value"},
 		Timestamp:   time.Now(),
 		CreatedBy:   "benchmark",
-		Md5Hash:     validMd5Hash,
+		Md5Hash:     strPtr(validMd5Hash),
 		Payload:     &map[string]interface{}{"data": "benchmark"},
 	}
 
@@ -683,7 +688,7 @@ func BenchmarkEventUnmarshaling(b *testing.B) {
 		Metadata:    map[string]string{"key": "value"},
 		Timestamp:   time.Now(),
 		CreatedBy:   "benchmark",
-		Md5Hash:     "d41d8cd98f00b204e9800998ecf8427e",
+		Md5Hash:     strPtr("d41d8cd98f00b204e9800998ecf8427e"),
 		Payload:     &map[string]interface{}{"data": "benchmark"},
 	}
 
@@ -700,5 +705,148 @@ func BenchmarkUUIDGeneration(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = uuid.New()
+	}
+}
+
+func TestEventJson_UnmarshalJSON_Md5HashOptionalWithoutPayload(t *testing.T) {
+	// Test that md5_hash is optional when payload is nil
+	tests := []struct {
+		name      string
+		jsonInput string
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name: "no payload, no md5_hash - should succeed",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "no payload, empty md5_hash - should succeed",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "with payload, no md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "md5_hash is required when payload is present",
+		},
+		{
+			name: "with payload, empty md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "md5_hash is required when payload is present",
+		},
+		{
+			name: "with payload, valid md5_hash - should succeed",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "5d41402abc4b2a76b9719d911017c592",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "with payload, invalid md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "invalid",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "pattern match",
+		},
+		{
+			name: "no payload, invalid md5_hash - should fail",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "invalid123",
+				"metadata": {"key": "value"},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: true,
+			errMsg:  "pattern match",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var event EventJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &event)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
 	}
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/v2/models"
 	"github.com/grasp-labs/ds-go-kit/x/log"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/sasl/scram"

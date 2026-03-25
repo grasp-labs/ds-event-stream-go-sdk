@@ -37,8 +37,9 @@ type EventJson struct {
 	// Unique identifier for the event.
 	Id uuid.UUID `json:"id" yaml:"id" mapstructure:"id"`
 
-	// MD5 hash of the canonical event representation.
-	Md5Hash string `json:"md5_hash" yaml:"md5_hash" mapstructure:"md5_hash"`
+	// MD5 hash of the canonical event representation. Required only when payload is
+	// present.
+	Md5Hash *string `json:"md5_hash,omitempty" yaml:"md5_hash,omitempty" mapstructure:"md5_hash,omitempty"`
 
 	// Optional human-readable message.
 	Message *string `json:"message,omitempty" yaml:"message,omitempty" mapstructure:"message,omitempty"`
@@ -89,9 +90,6 @@ func (j *EventJson) UnmarshalJSON(value []byte) error {
 	if _, ok := raw["id"]; raw != nil && !ok {
 		return fmt.Errorf("field id in EventJson: required")
 	}
-	if _, ok := raw["md5_hash"]; raw != nil && !ok {
-		return fmt.Errorf("field md5_hash in EventJson: required")
-	}
 	if _, ok := raw["metadata"]; raw != nil && !ok {
 		return fmt.Errorf("field metadata in EventJson: required")
 	}
@@ -121,8 +119,15 @@ func (j *EventJson) UnmarshalJSON(value []byte) error {
 	if len(plain.EventType) < 1 {
 		return fmt.Errorf("field %s length: must be >= %d", "event_type", 1)
 	}
-	if matched, _ := regexp.MatchString(`^[A-Fa-f0-9]{32}$`, string(plain.Md5Hash)); !matched {
-		return fmt.Errorf("field %s pattern match: must match %s", "md5_hash", `^[A-Fa-f0-9]{32}$`)
+	// Validate md5_hash format whenever it's provided (non-empty)
+	if plain.Md5Hash != nil && len(*plain.Md5Hash) > 0 {
+		if matched, _ := regexp.MatchString(`^[A-Fa-f0-9]{32}$`, string(*plain.Md5Hash)); !matched {
+			return fmt.Errorf("field %s pattern match: must match %s", "md5_hash", `^[A-Fa-f0-9]{32}$`)
+		}
+	}
+	// Require md5_hash to be present only when payload is present
+	if plain.Payload != nil && (plain.Md5Hash == nil || len(*plain.Md5Hash) == 0) {
+		return fmt.Errorf("field md5_hash is required when payload is present")
 	}
 	*j = EventJson(plain)
 	return nil

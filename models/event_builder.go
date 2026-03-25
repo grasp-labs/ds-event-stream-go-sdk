@@ -74,6 +74,12 @@ func NewEventBuilder(
 	metadata map[string]string,
 	md5Hash string,
 ) *EventBuilder {
+	// Convert md5Hash to pointer: nil if empty, otherwise pointer to string
+	var md5HashPtr *string
+	if md5Hash != "" {
+		md5HashPtr = &md5Hash
+	}
+
 	return &EventBuilder{
 		json: EventJson{
 			Id:          uuid.New(),
@@ -84,7 +90,7 @@ func NewEventBuilder(
 			SessionId:   sessionId,
 			RequestId:   requestId,
 			Metadata:    metadata,
-			Md5Hash:     md5Hash,
+			Md5Hash:     md5HashPtr,
 			Timestamp:   time.Now().UTC(),
 		},
 	}
@@ -179,7 +185,7 @@ func (b *EventBuilder) Build() (*SealedEvent, error) {
 
 	// MD5 hash is only required if payload is not null
 	if b.json.Payload != nil {
-		if !md5HashPattern.MatchString(b.json.Md5Hash) {
+		if b.json.Md5Hash == nil || !md5HashPattern.MatchString(*b.json.Md5Hash) {
 			return nil, fmt.Errorf("md5_hash must be a valid 32-character hex string")
 		}
 	}
@@ -228,7 +234,10 @@ func (e *SealedEvent) CreatedBy() string {
 
 // Md5Hash returns the MD5 hash.
 func (e *SealedEvent) Md5Hash() string {
-	return e.json.Md5Hash
+	if e.json.Md5Hash == nil {
+		return ""
+	}
+	return *e.json.Md5Hash
 }
 
 // Payload returns the event payload.

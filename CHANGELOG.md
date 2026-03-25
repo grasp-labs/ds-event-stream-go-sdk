@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.1] - 2026-03-20
+
+### Fixed
+- Module path updated to include `/v2` suffix for proper Go module v2+ semantics
+- All internal imports updated to use `github.com/grasp-labs/ds-event-stream-go-sdk/v2`
+- Examples and documentation updated with correct import paths
+- `md5_hash` is now optional when payload is absent:
+  - Updated JSON schemas (event.json, event.yaml) to remove `md5_hash` from required fields
+  - Added JSON Schema Draft 2020-12 conditional validation: `md5_hash` required when `payload` is present
+  - `EventJson.UnmarshalJSON` validates `md5_hash` format when provided, requires it only when payload is present
+  - Aligns with EventBuilder validation logic used by producers
+
+### Changed
+- Example modules updated to require Go 1.25.0 (matching main SDK)
+- README updated to use EventBuilder/SealedEvent pattern for producer examples
+
 ## [2.1.0] - 2026-03-16
 
 ### Added

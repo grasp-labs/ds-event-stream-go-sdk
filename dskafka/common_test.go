@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/grasp-labs/ds-event-stream-go-sdk/models"
+	"github.com/grasp-labs/ds-event-stream-go-sdk/v2/models"
 	"github.com/segmentio/kafka-go"
 	"github.com/stretchr/testify/assert"
 )
