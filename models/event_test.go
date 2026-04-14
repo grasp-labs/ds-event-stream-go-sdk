@@ -850,3 +850,346 @@ func TestEventJson_UnmarshalJSON_Md5HashOptionalWithoutPayload(t *testing.T) {
 		})
 	}
 }
+
+// Additional UnmarshalJSON edge case tests for better coverage
+func TestEventJson_UnmarshalJSON_MissingRequiredFields(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+		errMsg    string
+	}{
+		{
+			name: "missing created_by",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "created_by",
+		},
+		{
+			name: "missing event_source",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "event_source",
+		},
+		{
+			name: "missing event_type",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "event_type",
+		},
+		{
+			name: "missing id",
+			jsonInput: `{
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "id",
+		},
+		{
+			name: "missing metadata",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "metadata",
+		},
+		{
+			name: "missing request_id",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "request_id",
+		},
+		{
+			name: "missing session_id",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "session_id",
+		},
+		{
+			name: "missing tenant_id",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "tenant_id",
+		},
+		{
+			name: "missing timestamp",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {}
+			}`,
+			errMsg: "timestamp",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var event EventJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &event)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errMsg)
+		})
+	}
+}
+
+func TestEventJson_UnmarshalJSON_LengthValidation(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+		errMsg    string
+	}{
+		{
+			name: "empty created_by",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "created_by",
+		},
+		{
+			name: "empty event_source",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "event_source",
+		},
+		{
+			name: "empty event_type",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			errMsg: "event_type",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var event EventJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &event)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errMsg)
+		})
+	}
+}
+
+func TestEventJson_UnmarshalJSON_Md5HashEdgeCases(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+		wantErr   bool
+		errMsg    string
+	}{
+		{
+			name: "payload without md5_hash",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "md5_hash is required when payload is present",
+		},
+		{
+			name: "payload with empty md5_hash string",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z",
+				"payload": {"data": "test"}
+			}`,
+			wantErr: true,
+			errMsg:  "md5_hash is required when payload is present",
+		},
+		{
+			name: "no payload with valid md5_hash",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "d41d8cd98f00b204e9800998ecf8427e",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "no payload, no md5_hash",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: false,
+		},
+		{
+			name: "md5_hash with invalid pattern",
+			jsonInput: `{
+				"id": "3b8a9a3e-6f3b-4a4f-8f4b-0a9b2c1d2e3f",
+				"session_id": "8f3e0b9f-3a1c-4d2b-9c2a-1b2c3d4e5f60",
+				"request_id": "f0c1d2e3-4b5a-6789-abcd-ef0123456789",
+				"tenant_id": "1f2e3d4c-5b6a-7980-9a8b-7c6d5e4f3a2b",
+				"event_type": "test.event",
+				"event_source": "test-service",
+				"created_by": "test-user",
+				"md5_hash": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+				"metadata": {},
+				"timestamp": "2026-03-20T10:00:00Z"
+			}`,
+			wantErr: true,
+			errMsg:  "pattern match",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var event EventJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &event)
+
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestEventJson_UnmarshalJSON_InvalidJSON(t *testing.T) {
+	tests := []struct {
+		name      string
+		jsonInput string
+	}{
+		{
+			name:      "malformed JSON",
+			jsonInput: `{"id": "invalid json`,
+		},
+		{
+			name:      "not a JSON object",
+			jsonInput: `"just a string"`,
+		},
+		{
+			name:      "empty string",
+			jsonInput: ``,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var event EventJson
+			err := json.Unmarshal([]byte(tt.jsonInput), &event)
+			require.Error(t, err)
+		})
+	}
+}

@@ -14,7 +14,7 @@ import (
 
 // Producer wraps a kafka-go Writer for sending model messages to any topic.
 type Producer struct {
-	w      *kafka.Writer
+	w      kafkaWriter
 	client *kafka.Client
 }
 
@@ -85,7 +85,30 @@ func DefaultProducerConfig(clientCredentials ClientCredentials, bootstrapServers
 //	}
 //	defer producer.Close()
 func NewProducer(cfg Config) (*Producer, error) {
+	return NewProducerWithWriter(cfg, nil)
+}
+
+// NewProducerWithWriter creates a new Kafka producer with optional dependency injection.
+// This constructor is primarily used for testing to inject mock writers.
+//
+// Parameters:
+//   - cfg: Configuration containing brokers, credentials, and producer settings
+//   - writer: Optional kafkaWriter implementation (nil for production, mock for testing)
+//
+// Returns:
+//   - *Producer: A new producer instance ready to send messages
+//   - error: Any error that occurred during initialization
+//
+// Note: This is an advanced constructor. Most users should use NewProducer instead.
+func NewProducerWithWriter(cfg Config, writer kafkaWriter) (*Producer, error) {
 	ctx := context.Background()
+	
+	// If a writer is provided (testing), use it directly
+	if writer != nil {
+		return &Producer{w: writer, client: nil}, nil
+	}
+	
+	// Production mode: create real Kafka writer
 	if len(cfg.Brokers) == 0 {
 		log.Error(ctx, "kafka: no brokers provided")
 		return nil, errors.New("kafka: no brokers provided")

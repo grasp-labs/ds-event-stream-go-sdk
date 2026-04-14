@@ -12,10 +12,15 @@ import (
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
+// readerFactory is a function type that creates a kafkaReader for a given topic and groupID.
+// This allows dependency injection of mock readers for testing.
+type readerFactory func(topic, groupID string) (kafkaReader, error)
+
 // Consumer wraps a kafka-go Reader for reading model messages from topics.
 type Consumer struct {
-	config  Config
-	readers map[string]*kafka.Reader // map key is topic or groupID:topic for readers with consumer groups
+	config        Config
+	readers       map[string]kafkaReader // map key is topic or groupID:topic for readers with consumer groups
+	readerFactory readerFactory          // function to create new readers (nil for production)
 }
 
 // DefaultConsumerConfig creates a Config with sensible production defaults for Kafka consumers.
@@ -87,15 +92,37 @@ func DefaultConsumerConfig(clientCredentials ClientCredentials, bootstrapServers
 //	}
 //	defer consumer.Close()
 func NewConsumer(cfg Config) (*Consumer, error) {
+	return NewConsumerWithReaderFactory(cfg, nil)
+}
+
+// NewConsumerWithReaderFactory creates a new Kafka consumer with optional dependency injection.
+// This constructor is primarily used for testing to inject mock reader factories.
+//
+// Parameters:
+//   - cfg: Configuration containing brokers, credentials, and consumer settings
+//   - factory: Optional reader factory function (nil for production, mock for testing)
+//
+// Returns:
+//   - *Consumer: A new consumer instance ready to read messages
+//   - error: Any error that occurred during initialization
+//
+// Note: This is an advanced constructor. Most users should use NewConsumer instead.
+func NewConsumerWithReaderFactory(cfg Config, factory readerFactory) (*Consumer, error) {
 	ctx := context.Background()
-	if len(cfg.Brokers) == 0 {
-		log.Error(ctx, "kafka: no brokers provided")
-		return nil, errors.New("kafka: no brokers provided")
+	
+	// If a factory is provided (testing), skip broker validation
+	if factory == nil {
+		// Production mode: validate brokers
+		if len(cfg.Brokers) == 0 {
+			log.Error(ctx, "kafka: no brokers provided")
+			return nil, errors.New("kafka: no brokers provided")
+		}
 	}
 
 	return &Consumer{
-		config:  cfg,
-		readers: make(map[string]*kafka.Reader),
+		config:        cfg,
+		readers:       make(map[string]kafkaReader),
+		readerFactory: factory,
 	}, nil
 }
 
@@ -153,14 +180,9 @@ func (c *Consumer) Close() error {
 // Returns:
 //   - *kafka.Reader: The reader instance for the topic/group combination
 //   - error: Any error that occurred during reader creation or offset setting
-func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, error) {
+func (c *Consumer) getOrCreateReader(topic, groupID string) (kafkaReader, error) {
 	if c == nil {
 		return nil, errors.New("kafka: consumer not initialized")
-	}
-
-	// Validate brokers configuration
-	if len(c.config.Brokers) == 0 {
-		return nil, errors.New("kafka: no brokers provided")
 	}
 
 	key := topic
@@ -170,6 +192,22 @@ func (c *Consumer) getOrCreateReader(topic, groupID string) (*kafka.Reader, erro
 
 	if reader, exists := c.readers[key]; exists {
 		return reader, nil
+	}
+
+	// If a reader factory is provided (testing), use it
+	if c.readerFactory != nil {
+		reader, err := c.readerFactory(topic, groupID)
+		if err != nil {
+			return nil, err
+		}
+		c.readers[key] = reader
+		return reader, nil
+	}
+
+	// Production mode: create real Kafka reader
+	// Validate brokers configuration
+	if len(c.config.Brokers) == 0 {
+		return nil, errors.New("kafka: no brokers provided")
 	}
 
 	// Create SASL mechanism for the reader
@@ -409,7 +447,7 @@ func (c *Consumer) CommitEvents(ctx context.Context, topic string, msgs ...kafka
 	}
 
 	// Find the reader for this topic
-	var reader *kafka.Reader
+	var reader kafkaReader
 	for key, r := range c.readers {
 		if key == topic || (len(key) > len(topic) && key[len(key)-len(topic):] == topic) {
 			reader = r
@@ -488,7 +526,7 @@ func (c *Consumer) CommitEvent(ctx context.Context, message kafka.Message) error
 	}
 
 	// Find the reader for this topic
-	var reader *kafka.Reader
+	var reader kafkaReader
 	for key, r := range c.readers {
 		if key == message.Topic || (len(key) > len(message.Topic) && key[len(key)-len(message.Topic):] == message.Topic) {
 			reader = r
@@ -540,7 +578,7 @@ func (c *Consumer) Stats(topic string) (kafka.ReaderStats, error) {
 	}
 
 	// Find the reader for this topic
-	var reader *kafka.Reader
+	var reader kafkaReader
 	for key, r := range c.readers {
 		if key == topic || (len(key) > len(topic) && key[len(key)-len(topic):] == topic) {
 			reader = r
