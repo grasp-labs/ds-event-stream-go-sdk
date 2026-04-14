@@ -2169,7 +2169,7 @@ func TestGetOrCreateReader_WithPartition(t *testing.T) {
 	// Error expected from connection, but the partition logic should execute
 	if err == nil {
 		assert.NotNil(t, reader)
-		reader.Close()
+		_ = reader.Close()
 	}
 }
 
@@ -2192,7 +2192,7 @@ func TestGetOrCreateReader_CachedReader(t *testing.T) {
 		reader2, err2 := consumer.getOrCreateReader("test-topic", "")
 		assert.NoError(t, err2)
 		assert.Equal(t, reader1, reader2, "Should return the same cached reader")
-		reader1.Close()
+		_ = reader1.Close()
 	}
 }
 
@@ -2215,8 +2215,8 @@ func TestGetOrCreateReader_DifferentGroupIDs(t *testing.T) {
 	// They should be different readers
 	if err1 == nil && reader1 != nil && err2 == nil && reader2 != nil {
 		assert.NotEqual(t, reader1, reader2, "Different group IDs should create different readers")
-		reader1.Close()
-		reader2.Close()
+		_ = reader1.Close()
+		_ = reader2.Close()
 	}
 }
 
@@ -2260,7 +2260,7 @@ func TestGetOrCreateReader_WithEmptyGroupID(t *testing.T) {
 	reader, err := consumer.getOrCreateReader("test-topic", "")
 	// This covers the SetOffset code path for non-group consumers
 	if err == nil && reader != nil {
-		reader.Close()
+		_ = reader.Close()
 	}
 }
 

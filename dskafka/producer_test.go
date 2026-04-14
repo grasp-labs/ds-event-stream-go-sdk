@@ -708,7 +708,7 @@ func TestSendEvent_WithCustomHeaders(t *testing.T) {
 	producer, err := NewProducer(config)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 	ctx := context.Background()
@@ -739,7 +739,7 @@ func TestSendEvent_ZeroUUIDPartitioning(t *testing.T) {
 	producer, err := NewProducer(config)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	ctx := context.Background()
 
@@ -767,7 +767,7 @@ func TestSendEvent_ContextWithDeadline(t *testing.T) {
 	producer, err := NewProducer(config)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 
@@ -795,7 +795,7 @@ func TestSendEvent_ContextWithoutDeadline(t *testing.T) {
 	producer, err := NewProducer(config)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 
@@ -821,7 +821,7 @@ func TestSafeSendEvent_ErrorLogging(t *testing.T) {
 	producer, err := NewProducer(config)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 	ctx := context.Background()
@@ -871,7 +871,7 @@ func TestSendEvent_MockMode(t *testing.T) {
 	producer, err := NewProducerWithWriter(config, mockW)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 	ctx := context.Background()
@@ -899,7 +899,7 @@ func TestSendEvent_MockMode_WithHeaders(t *testing.T) {
 
 	producer, err := NewProducerWithWriter(config, mockW)
 	assert.NoError(t, err)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 	ctx := context.Background()
@@ -932,7 +932,7 @@ func TestMockWriterCapture(t *testing.T) {
 
 	producer, err := NewProducerWithWriter(config, mockW)
 	assert.NoError(t, err)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event1 := createTestEvent()
 	event2 := createTestEvent()
@@ -964,7 +964,7 @@ func TestSafeSendEvent_MockMode(t *testing.T) {
 
 	producer, err := NewProducerWithWriter(config, mockW)
 	assert.NoError(t, err)
-	defer producer.Close()
+	defer func() { _ = producer.Close() }()
 
 	event := createTestEvent()
 	ctx := context.Background()
