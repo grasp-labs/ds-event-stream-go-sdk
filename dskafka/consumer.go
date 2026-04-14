@@ -109,7 +109,7 @@ func NewConsumer(cfg Config) (*Consumer, error) {
 // Note: This is an advanced constructor. Most users should use NewConsumer instead.
 func NewConsumerWithReaderFactory(cfg Config, factory readerFactory) (*Consumer, error) {
 	ctx := context.Background()
-	
+
 	// If a factory is provided (testing), skip broker validation
 	if factory == nil {
 		// Production mode: validate brokers

@@ -859,7 +859,7 @@ func TestClose_NilWriter(t *testing.T) {
 func TestSendEvent_MockMode(t *testing.T) {
 	// Create mock writer
 	mockW := newMockWriter()
-	
+
 	config := Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -879,7 +879,7 @@ func TestSendEvent_MockMode(t *testing.T) {
 	// Should succeed with mock writer
 	err = producer.SendEvent(ctx, "test-topic", event)
 	assert.NoError(t, err, "SendEvent should succeed with mock writer")
-	
+
 	// Verify message was written
 	assert.Equal(t, 1, len(mockW.messages), "Should have written 1 message")
 	assert.Equal(t, "test-topic", mockW.messages[0].Topic)
@@ -888,7 +888,7 @@ func TestSendEvent_MockMode(t *testing.T) {
 func TestSendEvent_MockMode_WithHeaders(t *testing.T) {
 	// Create mock writer
 	mockW := newMockWriter()
-	
+
 	config := Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -911,7 +911,7 @@ func TestSendEvent_MockMode_WithHeaders(t *testing.T) {
 	// Should succeed with mock writer
 	err = producer.SendEvent(ctx, "test-topic", event, headers...)
 	assert.NoError(t, err, "SendEvent with headers should succeed with mock writer")
-	
+
 	// Verify message was written with headers
 	assert.Equal(t, 1, len(mockW.messages), "Should have written 1 message")
 	assert.Equal(t, "test-topic", mockW.messages[0].Topic)
@@ -921,7 +921,7 @@ func TestSendEvent_MockMode_WithHeaders(t *testing.T) {
 func TestMockWriterCapture(t *testing.T) {
 	// Test that mockWriter properly captures messages
 	mockW := newMockWriter()
-	
+
 	config := Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -943,7 +943,7 @@ func TestMockWriterCapture(t *testing.T) {
 	assert.NoError(t, err)
 	err = producer.SendEvent(ctx, "topic2", event2)
 	assert.NoError(t, err)
-	
+
 	// Verify both messages were captured
 	assert.Equal(t, 2, len(mockW.messages), "Should have captured 2 messages")
 	assert.Equal(t, "topic1", mockW.messages[0].Topic)
@@ -953,7 +953,7 @@ func TestMockWriterCapture(t *testing.T) {
 func TestSafeSendEvent_MockMode(t *testing.T) {
 	// Create mock writer
 	mockW := newMockWriter()
-	
+
 	config := Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -973,7 +973,7 @@ func TestSafeSendEvent_MockMode(t *testing.T) {
 	assert.NotPanics(t, func() {
 		producer.SafeSendEvent(ctx, "test-topic", event)
 	})
-	
+
 	// Verify message was sent
 	assert.Equal(t, 1, len(mockW.messages), "Should have sent 1 message")
 }

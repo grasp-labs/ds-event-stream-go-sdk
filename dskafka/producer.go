@@ -102,12 +102,12 @@ func NewProducer(cfg Config) (*Producer, error) {
 // Note: This is an advanced constructor. Most users should use NewProducer instead.
 func NewProducerWithWriter(cfg Config, writer kafkaWriter) (*Producer, error) {
 	ctx := context.Background()
-	
+
 	// If a writer is provided (testing), use it directly
 	if writer != nil {
 		return &Producer{w: writer, client: nil}, nil
 	}
-	
+
 	// Production mode: create real Kafka writer
 	if len(cfg.Brokers) == 0 {
 		log.Error(ctx, "kafka: no brokers provided")

@@ -710,8 +710,8 @@ func TestGetOrCreateReader(t *testing.T) {
 
 		// Should be different reader instances due to different group IDs
 		assert.NotEqual(t, reader1, reader2)
-			// Removed: Internal implementation test - assert.Equal for reader.Config()
-			// Removed: Internal implementation test - assert.Equal for reader.Config()
+		// Removed: Internal implementation test - assert.Equal for reader.Config()
+		// Removed: Internal implementation test - assert.Equal for reader.Config()
 	})
 
 	t.Run("creates reader with empty group ID", func(t *testing.T) {
@@ -800,8 +800,8 @@ func TestGetOrCreateReader(t *testing.T) {
 
 		// Should be different reader instances
 		assert.NotEqual(t, reader1, reader2)
-			// Removed: Internal implementation test - assert.Equal for reader.Config()
-			// Removed: Internal implementation test - assert.Equal for reader.Config()
+		// Removed: Internal implementation test - assert.Equal for reader.Config()
+		// Removed: Internal implementation test - assert.Equal for reader.Config()
 	})
 
 	t.Run("partition config overrides group ID", func(t *testing.T) {
@@ -2269,15 +2269,15 @@ func TestReadEvent_MockMode(t *testing.T) {
 	// Create a mock event and message
 	mockEvent := createMockEvent()
 	mockMsg := createMockKafkaMessage("test-topic", mockEvent)
-	
+
 	// Create mock reader that returns our event
 	mockReader := newMockReader(mockMsg)
-	
+
 	// Create consumer with mock reader factory
 	factory := func(topic, groupID string) (kafkaReader, error) {
 		return mockReader, nil
 	}
-	
+
 	consumer, err := NewConsumerWithReaderFactory(Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -2287,9 +2287,9 @@ func TestReadEvent_MockMode(t *testing.T) {
 	}, factory)
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
-	
+
 	ctx := context.Background()
-	
+
 	// Should succeed with mock reader
 	event, err := consumer.ReadEvent(ctx, "test-topic")
 	assert.NoError(t, err, "ReadEvent should succeed with mock reader")
@@ -2302,17 +2302,17 @@ func TestReadEvent_MockMode_WithGroupID(t *testing.T) {
 	// Create a mock event and message
 	mockEvent := createMockEvent()
 	mockMsg := createMockKafkaMessage("test-topic", mockEvent)
-	
+
 	// Create mock reader
 	mockReader := newMockReader(mockMsg)
-	
+
 	// Create consumer with mock reader factory
 	factory := func(topic, groupID string) (kafkaReader, error) {
 		// Verify groupID is passed correctly
 		assert.Equal(t, "test-group", groupID)
 		return mockReader, nil
 	}
-	
+
 	consumer, err := NewConsumerWithReaderFactory(Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -2322,9 +2322,9 @@ func TestReadEvent_MockMode_WithGroupID(t *testing.T) {
 	}, factory)
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
-	
+
 	ctx := context.Background()
-	
+
 	// Should succeed with group ID in mock mode
 	event, err := consumer.ReadEvent(ctx, "test-topic", "test-group")
 	assert.NoError(t, err, "ReadEvent with groupID should succeed with mock reader")
@@ -2335,15 +2335,15 @@ func TestReadEventWithMessage_MockMode(t *testing.T) {
 	// Create a mock event and message
 	mockEvent := createMockEvent()
 	mockMsg := createMockKafkaMessage("test-topic", mockEvent)
-	
+
 	// Create mock reader
 	mockReader := newMockReader(mockMsg)
-	
+
 	// Create consumer with mock reader factory
 	factory := func(topic, groupID string) (kafkaReader, error) {
 		return mockReader, nil
 	}
-	
+
 	consumer, err := NewConsumerWithReaderFactory(Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -2353,9 +2353,9 @@ func TestReadEventWithMessage_MockMode(t *testing.T) {
 	}, factory)
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
-	
+
 	ctx := context.Background()
-	
+
 	// Should succeed without actual Kafka connection
 	event, msg, err := consumer.ReadEventWithMessage(ctx, "test-topic")
 	assert.NoError(t, err, "ReadEventWithMessage should succeed with mock reader")
@@ -2369,15 +2369,15 @@ func TestReadEventWithMessage_MockMode_WithGroupID(t *testing.T) {
 	// Create a mock event and message
 	mockEvent := createMockEvent()
 	mockMsg := createMockKafkaMessage("test-topic", mockEvent)
-	
+
 	// Create mock reader
 	mockReader := newMockReader(mockMsg)
-	
+
 	// Create consumer with mock reader factory
 	factory := func(topic, groupID string) (kafkaReader, error) {
 		return mockReader, nil
 	}
-	
+
 	consumer, err := NewConsumerWithReaderFactory(Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -2388,9 +2388,9 @@ func TestReadEventWithMessage_MockMode_WithGroupID(t *testing.T) {
 	}, factory)
 	assert.NoError(t, err)
 	assert.NotNil(t, consumer)
-	
+
 	ctx := context.Background()
-	
+
 	// Should succeed using default group ID from config
 	event, msg, err := consumer.ReadEventWithMessage(ctx, "test-topic")
 	assert.NoError(t, err)
@@ -2413,13 +2413,13 @@ func TestCreateMockEvent(t *testing.T) {
 func TestCreateMockKafkaMessage(t *testing.T) {
 	event := createMockEvent()
 	msg := createMockKafkaMessage("test-topic", event)
-	
+
 	assert.Equal(t, "test-topic", msg.Topic)
 	assert.Equal(t, 0, msg.Partition)
 	assert.Equal(t, int64(1), msg.Offset)
 	assert.NotEmpty(t, msg.Key)
 	assert.NotEmpty(t, msg.Value)
-	
+
 	// Verify the value is valid JSON of the event
 	var unmarshaled models.EventJson
 	err := json.Unmarshal(msg.Value, &unmarshaled)

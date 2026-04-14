@@ -37,12 +37,12 @@ func (m *mockWriter) Close() error {
 
 // mockReader implements kafkaReader for testing
 type mockReader struct {
-	messages    []kafka.Message
-	messageIdx  int
-	readErr     error
-	commitErr   error
-	closeErr    error
-	stats       kafka.ReaderStats
+	messages   []kafka.Message
+	messageIdx int
+	readErr    error
+	commitErr  error
+	closeErr   error
+	stats      kafka.ReaderStats
 }
 
 func newMockReader(messages ...kafka.Message) *mockReader {
