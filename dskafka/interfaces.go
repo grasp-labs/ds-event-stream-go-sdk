@@ -6,24 +6,26 @@ import (
 	"github.com/segmentio/kafka-go"
 )
 
-// kafkaWriter is an internal interface that abstracts kafka.Writer for testing.
-// This allows dependency injection of mock writers in tests without changing production code.
-type kafkaWriter interface {
+// KafkaWriter abstracts kafka.Writer for dependency injection and testing.
+type KafkaWriter interface {
 	WriteMessages(ctx context.Context, msgs ...kafka.Message) error
 	Close() error
 }
 
-// kafkaReader is an internal interface that abstracts kafka.Reader for testing.
-// This allows dependency injection of mock readers in tests without changing production code.
-type kafkaReader interface {
+// KafkaReader abstracts kafka.Reader for dependency injection and testing.
+type KafkaReader interface {
 	ReadMessage(ctx context.Context) (kafka.Message, error)
 	CommitMessages(ctx context.Context, msgs ...kafka.Message) error
 	Stats() kafka.ReaderStats
 	Close() error
 }
 
-// Ensure kafka.Writer implements kafkaWriter interface
-var _ kafkaWriter = (*kafka.Writer)(nil)
+// Backward-compatible internal aliases.
+type kafkaWriter = KafkaWriter
+type kafkaReader = KafkaReader
 
-// Ensure kafka.Reader implements kafkaReader interface
-var _ kafkaReader = (*kafka.Reader)(nil)
+// Ensure kafka.Writer implements KafkaWriter interface.
+var _ KafkaWriter = (*kafka.Writer)(nil)
+
+// Ensure kafka.Reader implements KafkaReader interface.
+var _ KafkaReader = (*kafka.Reader)(nil)

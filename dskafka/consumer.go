@@ -12,15 +12,18 @@ import (
 	"github.com/segmentio/kafka-go/sasl/scram"
 )
 
-// readerFactory is a function type that creates a kafkaReader for a given topic and groupID.
-// This allows dependency injection of mock readers for testing.
-type readerFactory func(topic, groupID string) (kafkaReader, error)
+// ReaderFactory creates a KafkaReader for a given topic and groupID.
+// This allows dependency injection of mock readers from external packages.
+type ReaderFactory func(topic, groupID string) (KafkaReader, error)
+
+// Backward-compatible internal alias.
+type readerFactory = ReaderFactory
 
 // Consumer wraps a kafka-go Reader for reading model messages from topics.
 type Consumer struct {
 	config        Config
 	readers       map[string]kafkaReader // map key is topic or groupID:topic for readers with consumer groups
-	readerFactory readerFactory          // function to create new readers (nil for production)
+	readerFactory ReaderFactory          // function to create new readers (nil for production)
 }
 
 // DefaultConsumerConfig creates a Config with sensible production defaults for Kafka consumers.
@@ -107,7 +110,7 @@ func NewConsumer(cfg Config) (*Consumer, error) {
 //   - error: Any error that occurred during initialization
 //
 // Note: This is an advanced constructor. Most users should use NewConsumer instead.
-func NewConsumerWithReaderFactory(cfg Config, factory readerFactory) (*Consumer, error) {
+func NewConsumerWithReaderFactory(cfg Config, factory ReaderFactory) (*Consumer, error) {
 	ctx := context.Background()
 
 	// If a factory is provided (testing), skip broker validation

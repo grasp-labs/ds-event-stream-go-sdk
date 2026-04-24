@@ -93,9 +93,13 @@ func createMockEvent() *models.EventJson {
 	}
 }
 
-// createMockKafkaMessage creates a mock kafka.Message for testing
-func createMockKafkaMessage(topic string, event *models.EventJson) kafka.Message {
-	jsonBytes, _ := json.Marshal(event)
+// createMockKafkaMessage creates a mock kafka.Message for testing.
+func createMockKafkaMessage(topic string, event *models.EventJson) (kafka.Message, error) {
+	jsonBytes, err := json.Marshal(event)
+	if err != nil {
+		return kafka.Message{}, err
+	}
+
 	return kafka.Message{
 		Topic:     topic,
 		Partition: 0,
@@ -103,5 +107,5 @@ func createMockKafkaMessage(topic string, event *models.EventJson) kafka.Message
 		Key:       []byte(event.Id.String()),
 		Value:     jsonBytes,
 		Time:      event.Timestamp,
-	}
+	}, nil
 }

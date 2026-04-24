@@ -11,6 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func headersToMap(headers []kafka.Header) map[string]string {
+	result := make(map[string]string, len(headers))
+	for _, h := range headers {
+		result[h.Key] = string(h.Value)
+	}
+	return result
+}
+
 func TestNewProducerValidation(t *testing.T) {
 	// Test with empty brokers
 	config := Config{
@@ -697,6 +705,8 @@ func TestSendEvent_NilWriter(t *testing.T) {
 }
 
 func TestSendEvent_WithCustomHeaders(t *testing.T) {
+	mockW := newMockWriter()
+
 	config := Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -705,7 +715,7 @@ func TestSendEvent_WithCustomHeaders(t *testing.T) {
 		},
 	}
 
-	producer, err := NewProducer(config)
+	producer, err := NewProducerWithWriter(config, mockW)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
 	defer func() { _ = producer.Close() }()
@@ -720,11 +730,19 @@ func TestSendEvent_WithCustomHeaders(t *testing.T) {
 	}
 
 	err = producer.SendEvent(ctx, "test-topic", event, headers...)
-	// Error is expected due to no Kafka connection, but headers code path is covered
-	if err != nil {
-		// Just ensure it's not a header-related error
-		assert.NotContains(t, err.Error(), "header")
+	assert.NoError(t, err)
+
+	if !assert.Len(t, mockW.messages, 1, "expected one message to be written") {
+		return
 	}
+	msg := mockW.messages[0]
+	assert.Equal(t, "test-topic", msg.Topic)
+
+	headerMap := headersToMap(msg.Headers)
+	assert.Equal(t, "application/json", headerMap["content-type"])
+	assert.Equal(t, "Event", headerMap["message-type"])
+	assert.Equal(t, "custom-value", headerMap["custom-header"])
+	assert.Equal(t, "test-system", headerMap["source-system"])
 }
 
 func TestSendEvent_ZeroUUIDPartitioning(t *testing.T) {
@@ -915,7 +933,10 @@ func TestSendEvent_MockMode_WithHeaders(t *testing.T) {
 	// Verify message was written with headers
 	assert.Equal(t, 1, len(mockW.messages), "Should have written 1 message")
 	assert.Equal(t, "test-topic", mockW.messages[0].Topic)
-	assert.True(t, len(mockW.messages[0].Headers) > 0, "Should have headers")
+	headerMap := headersToMap(mockW.messages[0].Headers)
+	assert.Equal(t, "application/json", headerMap["content-type"])
+	assert.Equal(t, "Event", headerMap["message-type"])
+	assert.Equal(t, "custom-value", headerMap["custom-header"])
 }
 
 func TestMockWriterCapture(t *testing.T) {

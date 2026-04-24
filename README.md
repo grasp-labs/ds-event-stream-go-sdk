@@ -377,13 +377,14 @@ func (m *mockWriter) Close() error {
 func TestMyConsumer(t *testing.T) {
     // Create a mock reader with predefined messages
     mockEvent := createMockEvent()
-    mockMsg := createMockKafkaMessage("test-topic", mockEvent)
+    mockMsg, err := createMockKafkaMessage("test-topic", mockEvent)
+    assert.NoError(t, err)
     mockReader := newMockReader(mockMsg)
     
     // Create consumer with mock reader factory
-    factory := func(topic, groupID string) (kafkaReader, error) {
+    factory := dskafka.ReaderFactory(func(topic, groupID string) (dskafka.KafkaReader, error) {
         return mockReader, nil
-    }
+    })
     
     config := dskafka.Config{
         Brokers: []string{"localhost:9092"},
@@ -447,7 +448,7 @@ make test-coverage
 make integration-test
 ```
 
-The SDK achieves **excellent code coverage** (92.9% dskafka, 99.5% models) through comprehensive unit tests that use dependency injection for testing without external dependencies.
+The SDK has comprehensive unit tests that use dependency injection for testing without external dependencies.
 
 ### Code Generation
 
