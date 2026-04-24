@@ -746,6 +746,8 @@ func TestSendEvent_WithCustomHeaders(t *testing.T) {
 }
 
 func TestSendEvent_ZeroUUIDPartitioning(t *testing.T) {
+	mockW := newMockWriter()
+
 	config := Config{
 		Brokers: []string{"localhost:9092"},
 		ClientCredentials: ClientCredentials{
@@ -754,23 +756,26 @@ func TestSendEvent_ZeroUUIDPartitioning(t *testing.T) {
 		},
 	}
 
-	producer, err := NewProducer(config)
+	producer, err := NewProducerWithWriter(config, mockW)
 	assert.NoError(t, err)
 	assert.NotNil(t, producer)
 	defer func() { _ = producer.Close() }()
 
 	ctx := context.Background()
 
-	// Create an event that would have zero UUID for Id (testing fallback to SessionId)
-	// This tests the partitioning logic that falls back to SessionId
-	event := createTestEvent()
+	// Zero-value SealedEvent has Id == uuid.Nil, which triggers fallback to SessionId.
+	event := &models.SealedEvent{}
+	assert.Equal(t, uuid.Nil, event.Id())
 
-	// This covers the partitioning key selection code path
 	err = producer.SendEvent(ctx, "test-topic", event)
-	// Connection error expected but partitioning logic is executed
-	if err != nil {
-		assert.NotContains(t, err.Error(), "partition")
+	assert.NoError(t, err)
+
+	if !assert.Len(t, mockW.messages, 1, "expected one message to be written") {
+		return
 	}
+
+	msg := mockW.messages[0]
+	assert.Equal(t, []byte(event.SessionId().String()), msg.Key)
 }
 
 func TestSendEvent_ContextWithDeadline(t *testing.T) {
