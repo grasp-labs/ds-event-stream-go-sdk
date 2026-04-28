@@ -320,3 +320,257 @@ func TestEvent_AsJSON_RejectsNilEvent(t *testing.T) {
 	assert.Nil(t, jsonBytes)
 	assert.Contains(t, err.Error(), "event pointer is nil")
 }
+
+func TestSealedEvent_Getters(t *testing.T) {
+	// Create test data
+	tenantId := uuid.New()
+	sessionId := uuid.New()
+	requestId := uuid.New()
+	eventType := "test.event.created"
+	eventSource := "test-service"
+	createdBy := "test-user"
+	md5Hash := "d41d8cd98f00b204e9800998ecf8427e"
+	payload := map[string]interface{}{"key": "value"}
+
+	event, err := NewEventBuilder(
+		eventType,
+		eventSource,
+		createdBy,
+		tenantId,
+		sessionId,
+		requestId,
+		map[string]string{"meta": "data"},
+		md5Hash,
+	).WithPayload(payload).Build()
+
+	require.NoError(t, err)
+	require.NotNil(t, event)
+
+	// Test all getters
+	assert.NotEqual(t, uuid.Nil, event.Id())
+	assert.Equal(t, sessionId, event.SessionId())
+	assert.Equal(t, eventType, event.EventType())
+	assert.Equal(t, eventSource, event.EventSource())
+	assert.Equal(t, requestId, event.RequestId())
+	assert.Equal(t, tenantId, event.TenantId())
+	assert.Equal(t, createdBy, event.CreatedBy())
+	assert.Equal(t, md5Hash, event.Md5Hash())
+	assert.Equal(t, payload, event.Payload())
+	assert.False(t, event.Timestamp().IsZero())
+}
+
+func TestSealedEvent_Md5Hash_NilCase(t *testing.T) {
+	// Test getter when md5Hash is nil (no payload)
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"", // empty md5Hash, no payload
+	).Build()
+
+	require.NoError(t, err)
+	require.NotNil(t, event)
+
+	// Should return empty string when md5Hash is nil
+	assert.Equal(t, "", event.Md5Hash())
+}
+
+func TestEventBuilder_WithAffectedEntityUri(t *testing.T) {
+	uri := "https://example.com/entity/123"
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	).WithAffectedEntityUri(uri).
+		WithPayload(map[string]interface{}{"data": "test"}).
+		Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	// Verify the URI is set by marshaling and inspecting JSON
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+
+	var unmarshaled EventJson
+	err = json.Unmarshal(jsonBytes, &unmarshaled)
+	require.NoError(t, err)
+	require.NotNil(t, unmarshaled.AffectedEntityUri)
+	assert.Equal(t, uri, *unmarshaled.AffectedEntityUri)
+}
+
+func TestEventBuilder_WithEventSourceUri(t *testing.T) {
+	uri := "https://example.com/source"
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	).WithEventSourceUri(uri).
+		WithPayload(map[string]interface{}{"data": "test"}).
+		Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+
+	var unmarshaled EventJson
+	err = json.Unmarshal(jsonBytes, &unmarshaled)
+	require.NoError(t, err)
+	require.NotNil(t, unmarshaled.EventSourceUri)
+	assert.Equal(t, uri, *unmarshaled.EventSourceUri)
+}
+
+func TestEventBuilder_WithPayloadUri(t *testing.T) {
+	uri := "https://example.com/payload/456"
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	).WithPayloadUri(uri).
+		WithPayload(map[string]interface{}{"data": "test"}).
+		Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+
+	var unmarshaled EventJson
+	err = json.Unmarshal(jsonBytes, &unmarshaled)
+	require.NoError(t, err)
+	require.NotNil(t, unmarshaled.PayloadUri)
+	assert.Equal(t, uri, *unmarshaled.PayloadUri)
+}
+
+func TestEventBuilder_WithContextUri(t *testing.T) {
+	uri := "https://example.com/context/789"
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	).WithContextUri(uri).
+		WithPayload(map[string]interface{}{"data": "test"}).
+		Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+
+	var unmarshaled EventJson
+	err = json.Unmarshal(jsonBytes, &unmarshaled)
+	require.NoError(t, err)
+	require.NotNil(t, unmarshaled.ContextUri)
+	assert.Equal(t, uri, *unmarshaled.ContextUri)
+}
+
+func TestEventBuilder_WithContext(t *testing.T) {
+	ctx := map[string]interface{}{
+		"traceId": "abc123",
+		"spanId":  "def456",
+	}
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"key": "value"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	).WithContext(ctx).
+		WithPayload(map[string]interface{}{"data": "test"}).
+		Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+
+	var unmarshaled EventJson
+	err = json.Unmarshal(jsonBytes, &unmarshaled)
+	require.NoError(t, err)
+	require.NotNil(t, unmarshaled.Context)
+
+	contextMap, ok := unmarshaled.Context.(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "abc123", contextMap["traceId"])
+	assert.Equal(t, "def456", contextMap["spanId"])
+}
+
+func TestEventBuilder_AllOptionalFields(t *testing.T) {
+	// Test building an event with all optional fields set
+	event, err := NewEventBuilder(
+		"test.event",
+		"test-service",
+		"test-user",
+		uuid.New(),
+		uuid.New(),
+		uuid.New(),
+		map[string]string{"meta": "data"},
+		"d41d8cd98f00b204e9800998ecf8427e",
+	).WithMessage("Test message").
+		WithOwnerId("owner-123").
+		WithPayload(map[string]interface{}{"key": "value"}).
+		WithAffectedEntityUri("https://example.com/entity/1").
+		WithEventSourceUri("https://example.com/source").
+		WithPayloadUri("https://example.com/payload/1").
+		WithContextUri("https://example.com/context/1").
+		WithContext(map[string]interface{}{"trace": "xyz"}).
+		WithTags(map[string]string{"env": "prod", "region": "us-west"}).
+		Build()
+
+	require.NoError(t, err)
+	assert.NotNil(t, event)
+
+	// Verify all fields by unmarshaling
+	jsonBytes, err := event.AsJSON()
+	require.NoError(t, err)
+
+	var unmarshaled EventJson
+	err = json.Unmarshal(jsonBytes, &unmarshaled)
+	require.NoError(t, err)
+
+	assert.NotNil(t, unmarshaled.Message)
+	assert.NotNil(t, unmarshaled.OwnerId)
+	assert.NotNil(t, unmarshaled.Payload)
+	assert.NotNil(t, unmarshaled.AffectedEntityUri)
+	assert.NotNil(t, unmarshaled.EventSourceUri)
+	assert.NotNil(t, unmarshaled.PayloadUri)
+	assert.NotNil(t, unmarshaled.ContextUri)
+	assert.NotNil(t, unmarshaled.Context)
+	assert.NotNil(t, unmarshaled.Tags)
+
+	assert.Equal(t, "Test message", *unmarshaled.Message)
+	assert.Equal(t, "owner-123", *unmarshaled.OwnerId)
+	assert.Equal(t, 2, len(*unmarshaled.Tags))
+}

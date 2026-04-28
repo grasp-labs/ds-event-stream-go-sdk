@@ -305,6 +305,151 @@ make integration-test
 make check
 ```
 
+### Testing
+
+#### Unit Testing with Dependency Injection
+
+The SDK uses interface-based dependency injection for testability. You can easily test your code that uses producers and consumers without needing a real Kafka connection.
+
+##### Testing Producer Code
+
+```go
+package myservice
+
+import (
+    "context"
+    "testing"
+    
+    "github.com/grasp-labs/ds-event-stream-go-sdk/v2/dskafka"
+    "github.com/grasp-labs/ds-event-stream-go-sdk/v2/models"
+    "github.com/stretchr/testify/assert"
+)
+
+func TestMyProducer(t *testing.T) {
+    // Create a mock writer
+    mockWriter := newMockWriter()
+    
+    // Create producer with mock writer
+    config := dskafka.Config{
+        Brokers: []string{"localhost:9092"},
+        ClientCredentials: dskafka.ClientCredentials{
+            Username: "test",
+            Password: "test",
+        },
+    }
+    
+    producer, err := dskafka.NewProducerWithWriter(config, mockWriter)
+    assert.NoError(t, err)
+    defer producer.Close()
+    
+    // Test your code that uses the producer
+    event := createTestEvent()
+    err = producer.SendEvent(context.Background(), "test-topic", event)
+    assert.NoError(t, err)
+    
+    // Verify the message was sent
+    assert.Equal(t, 1, len(mockWriter.messages))
+    assert.Equal(t, "test-topic", mockWriter.messages[0].Topic)
+}
+
+// mockWriter captures messages for verification
+type mockWriter struct {
+    messages []kafka.Message
+}
+
+func newMockWriter() *mockWriter {
+    return &mockWriter{messages: []kafka.Message{}}
+}
+
+func (m *mockWriter) WriteMessages(ctx context.Context, msgs ...kafka.Message) error {
+    m.messages = append(m.messages, msgs...)
+    return nil
+}
+
+func (m *mockWriter) Close() error {
+    return nil
+}
+```
+
+##### Testing Consumer Code
+
+```go
+func TestMyConsumer(t *testing.T) {
+    // Create a mock reader with predefined messages
+    mockEvent := createMockEvent()
+    mockMsg, err := createMockKafkaMessage("test-topic", mockEvent)
+    assert.NoError(t, err)
+    mockReader := newMockReader(mockMsg)
+    
+    // Create consumer with mock reader factory
+    factory := dskafka.ReaderFactory(func(topic, groupID string) (dskafka.KafkaReader, error) {
+        return mockReader, nil
+    })
+    
+    config := dskafka.Config{
+        Brokers: []string{"localhost:9092"},
+        ClientCredentials: dskafka.ClientCredentials{
+            Username: "test",
+            Password: "test",
+        },
+    }
+    
+    consumer, err := dskafka.NewConsumerWithReaderFactory(config, factory)
+    assert.NoError(t, err)
+    
+    // Test your code that uses the consumer
+    event, err := consumer.ReadEvent(context.Background(), "test-topic")
+    assert.NoError(t, err)
+    assert.NotNil(t, event)
+}
+
+// mockReader returns predefined messages
+type mockReader struct {
+    messages []kafka.Message
+    index    int
+}
+
+func newMockReader(messages ...kafka.Message) *mockReader {
+    return &mockReader{messages: messages, index: 0}
+}
+
+func (m *mockReader) ReadMessage(ctx context.Context) (kafka.Message, error) {
+    if m.index >= len(m.messages) {
+        return kafka.Message{}, context.DeadlineExceeded
+    }
+    msg := m.messages[m.index]
+    m.index++
+    return msg, nil
+}
+
+func (m *mockReader) CommitMessages(ctx context.Context, msgs ...kafka.Message) error {
+    return nil
+}
+
+func (m *mockReader) Stats() kafka.ReaderStats {
+    return kafka.ReaderStats{}
+}
+
+func (m *mockReader) Close() error {
+    return nil
+}
+```
+
+#### Running Tests
+
+```bash
+# Run tests
+make test
+
+# Run tests with coverage
+make test-coverage
+
+# Run integration tests (requires real Kafka)
+make integration-test
+```
+
+The SDK has comprehensive unit tests that use dependency injection for testing without external dependencies.
+
 ### Code Generation
 
 Models are generated from JSON schemas:
