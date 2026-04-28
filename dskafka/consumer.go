@@ -16,9 +16,6 @@ import (
 // This allows dependency injection of mock readers from external packages.
 type ReaderFactory func(topic, groupID string) (KafkaReader, error)
 
-// Backward-compatible internal alias.
-type readerFactory = ReaderFactory
-
 // Consumer wraps a kafka-go Reader for reading model messages from topics.
 type Consumer struct {
 	config        Config
