@@ -145,6 +145,8 @@ func TestEventBuilder_ZeroValueRequestId(t *testing.T) {
 }
 
 func TestEventBuilder_EmptyMd5Hash(t *testing.T) {
+	// With payload set and no md5Hash supplied, Build() should compute one
+	// automatically rather than erroring (mirrors the Python SDK).
 	event, err := NewEventBuilder(
 		"test.event",
 		"test-service",
@@ -156,9 +158,9 @@ func TestEventBuilder_EmptyMd5Hash(t *testing.T) {
 		"",
 	).WithPayload(map[string]interface{}{"data": "test"}).Build()
 
-	assert.Error(t, err)
-	assert.Nil(t, event)
-	assert.Contains(t, err.Error(), "md5_hash must be a valid 32-character hex string")
+	require.NoError(t, err)
+	require.NotNil(t, event)
+	assert.Regexp(t, "^[A-Fa-f0-9]{32}$", event.Md5Hash())
 }
 
 func TestEventBuilder_EmptyMd5HashWithoutPayload(t *testing.T) {

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"regexp"
@@ -47,7 +49,9 @@ type EventBuilder struct {
 //   - sessionId: UUID identifying the session (cannot be zero-value)
 //   - requestId: UUID for request correlation (cannot be zero-value)
 //   - metadata: Key-value metadata (cannot be nil, use empty map if none)
-//   - md5Hash: MD5 hash of payload (required only if payload is not null, must be 32-char hex string)
+//   - md5Hash: MD5 hash of the canonical event representation (32-char hex string).
+//     Pass "" to have Build() compute it automatically; only needed if the caller
+//     wants to supply its own digest.
 //
 // Example:
 //
@@ -156,7 +160,13 @@ func (b *EventBuilder) WithTags(tags map[string]string) *EventBuilder {
 //   - eventType, eventSource, createdBy must have length >= 1
 //   - tenantId, sessionId, requestId must not be zero-value UUIDs
 //   - metadata must not be nil
-//   - md5Hash is only required if payload is not null; when provided, must match pattern ^[A-Fa-f0-9]{32}$
+//   - md5Hash, when explicitly provided, must match pattern ^[A-Fa-f0-9]{32}$
+//
+// If payload is set and no md5Hash was provided, Build() computes one
+// automatically: MD5 of the canonical JSON representation of the event with
+// md5_hash still null (an opaque content digest; never re-validated by
+// consumers). This mirrors the Python SDK's automatic hashing so callers
+// don't have to compute it themselves.
 //
 // Returns error if any validation fails.
 func (b *EventBuilder) Build() (*SealedEvent, error) {
@@ -183,9 +193,18 @@ func (b *EventBuilder) Build() (*SealedEvent, error) {
 		return nil, fmt.Errorf("metadata cannot be nil")
 	}
 
-	// MD5 hash is only required if payload is not null
 	if b.json.Payload != nil {
-		if b.json.Md5Hash == nil || !md5HashPattern.MatchString(*b.json.Md5Hash) {
+		if b.json.Md5Hash == nil {
+			// No hash supplied: compute one from the canonical event JSON
+			// (with md5_hash still null), mirroring the Python SDK.
+			raw, err := json.Marshal(&b.json)
+			if err != nil {
+				return nil, fmt.Errorf("compute md5_hash: %w", err)
+			}
+			sum := md5.Sum(raw)
+			h := hex.EncodeToString(sum[:])
+			b.json.Md5Hash = &h
+		} else if !md5HashPattern.MatchString(*b.json.Md5Hash) {
 			return nil, fmt.Errorf("md5_hash must be a valid 32-character hex string")
 		}
 	}
