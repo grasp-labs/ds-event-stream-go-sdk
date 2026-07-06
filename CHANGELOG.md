@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- `EventBuilder.Build()` now auto-computes `md5_hash` when a payload is set and no hash
+  was supplied to `NewEventBuilder`, instead of erroring. The hash is the MD5 of the
+  event's JSON representation with `md5_hash` still unset, the same strategy the Python
+  SDK uses (though the two SDKs do not produce identical hash values for equivalent
+  events, since field order and serialization format differ between languages).
+  Callers that already pass a valid hash are unaffected; a malformed non-empty hash
+  still fails validation as before.
+  **Behavior change:** code that relied on `Build()` erroring to catch a missing
+  `md5_hash` when a payload is set will no longer see that error — it now gets a
+  computed hash instead.
+
 ## [2.1.1] - 2026-03-20
 
 ### Fixed

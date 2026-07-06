@@ -62,7 +62,7 @@ func main() {
         uuid.New(),                                       // sessionId
         uuid.New(),                                       // requestId
         map[string]string{"version": "1.0"},            // metadata
-        "5d41402abc4b2a76b9719d911017c592",             // md5Hash (MD5 of payload)
+        "",                                              // md5Hash ("" = auto-computed by Build())
     ).WithPayload(map[string]interface{}{
         "userId": 123,
         "email":  "user@example.com",
@@ -254,7 +254,7 @@ event, err := models.NewEventBuilder(
     sessionId,      // uuid.UUID (non-zero)
     requestId,      // uuid.UUID (non-zero)
     metadata,       // map[string]string (non-nil)
-    md5Hash,        // string (32-char hex, required if payload is set)
+    md5Hash,        // string (32-char hex, or "" to have Build() compute it when payload is set)
 ).WithPayload(payload).        // optional
   WithMessage("msg").          // optional
   WithTags(tags).              // optional
