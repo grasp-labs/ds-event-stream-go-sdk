@@ -49,6 +49,13 @@ type Config struct {
 	ReadTimeout    time.Duration // per-message read timeout
 	CommitInterval time.Duration // How often to commit offsets
 	StartOffset    int64         // Where to start reading (kafka.FirstOffset or kafka.LastOffset)
+
+	// Logger receives internal SDK error logs (failed sends, read errors,
+	// offset failures, etc). If nil (the default), the SDK produces no log
+	// output. Set to &StdLogger{} to log to the standard library's logger,
+	// or provide your own Logger implementation to route SDK errors through
+	// your application's logging.
+	Logger Logger
 }
 
 // GetBootstrapServers returns the appropriate Kafka bootstrap servers for the specified environment.
