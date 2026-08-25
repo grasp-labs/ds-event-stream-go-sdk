@@ -52,8 +52,7 @@ type Config struct {
 
 	// Logger receives internal SDK error logs (failed sends, read errors,
 	// offset failures, etc). If nil (the default), the SDK produces no log
-	// output. Set to &StdLogger{} to log to the standard library's logger,
-	// or provide your own Logger implementation to route SDK errors through
+	// output. Provide a Logger implementation to route SDK errors through
 	// your application's logging.
 	Logger Logger
 }

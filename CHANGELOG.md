@@ -9,9 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - The SDK no longer logs to stderr unconditionally. Internal error logging is
-  now silent by default; set the new `Config.Logger` field (e.g. to
-  `&dskafka.StdLogger{}`, or a custom implementation of the `dskafka.Logger`
-  interface) to opt back in.
+  now silent by default; set the new `Config.Logger` field to a custom
+  implementation of the `dskafka.Logger` interface to opt back in.
 - `Consumer.ReadEvent`/`ReadEventWithMessage` no longer log expected read
   context deadline/cancellation (normal polling behavior) as errors.
 

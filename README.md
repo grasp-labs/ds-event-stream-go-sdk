@@ -227,17 +227,7 @@ config := dskafka.Config{
 
 By default, the SDK produces **no log output**. Internal errors (failed sends,
 read errors, offset failures, etc.) are silently dropped unless you opt in by
-setting `Config.Logger`:
-
-```go
-config := dskafka.Config{
-    // ...
-    Logger: &dskafka.StdLogger{}, // logs to the standard library logger (stderr)
-}
-```
-
-To route SDK errors through your own application's logger, implement the
-`dskafka.Logger` interface:
+implementing the `dskafka.Logger` interface and setting it on `Config.Logger`:
 
 ```go
 type Logger interface {
@@ -245,7 +235,12 @@ type Logger interface {
 }
 ```
 
-and set it on `Config.Logger`.
+```go
+config := dskafka.Config{
+    // ...
+    Logger: myAppLogger{}, // routes SDK errors through your own application's logger
+}
+```
 
 ## API Reference
 
