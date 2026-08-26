@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Consumer.ReadEvent`/`ReadEventWithMessage` no longer log expected read
   context deadline/cancellation (normal polling behavior) as errors.
 
+### Fixed
+- `Producer.SendEvent` now stamps the Kafka message `Time` in UTC (previously
+  local time), matching `SealedEvent.Timestamp`.
+
 ## [2.1.1] - 2026-03-20
 
 ### Fixed

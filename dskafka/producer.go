@@ -228,7 +228,7 @@ func (p *Producer) SendEvent(ctx context.Context, topic string, evt *models.Seal
 		Key:     []byte(key),
 		Value:   buf,
 		Headers: kh,
-		Time:    time.Now(),
+		Time:    time.Now().UTC(),
 	})
 
 	if werr != nil {
