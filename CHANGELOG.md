@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- The SDK no longer logs to stderr unconditionally. Internal error logging is
+  now silent by default; set the new `Config.Logger` field to a custom
+  implementation of the `dskafka.Logger` interface to opt back in.
+- `Consumer.ReadEvent`/`ReadEventWithMessage` no longer log expected read
+  context deadline/cancellation (normal polling behavior) as errors.
+
+### Fixed
+- `Producer.SendEvent` now stamps the Kafka message `Time` in UTC (previously
+  local time), matching `SealedEvent.Timestamp`.
+
 ## [2.1.1] - 2026-03-20
 
 ### Fixed
